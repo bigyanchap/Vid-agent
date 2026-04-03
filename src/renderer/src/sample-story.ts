@@ -1,0 +1,3 @@
+export const SAMPLE_STORY = `In a quiet coastal town, Mara finds an old camcorder in the lighthouse attic. Every tape she records plays back one minute of the future—always ending in static and the sound of waves crashing too close. When she recognizes a stranger in the footage, she realizes the device isn't predicting the future; it's bargaining for it.
+
+She teams up with the town's archivist to trace the camera's origin, uncovering a decades-old experiment tied to a storm that "paused" offshore. Each new clip shortens the gap between now and the moment the horizon folds inward. Mara must decide whether to destroy the last tape—or record herself into it, hoping the next keeper will know what to break.`
