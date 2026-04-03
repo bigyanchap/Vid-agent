@@ -45,7 +45,7 @@ export default function App() {
         </div>
 
         <div className="workbench__chat-pane">
-          <AgentChat />
+          <AgentChat showStorySuggestions={activeView === 'story'} />
         </div>
       </div>
 

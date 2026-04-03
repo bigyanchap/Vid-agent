@@ -1,10 +1,11 @@
 import { StoryView } from './StoryView'
 
-export type WorkspaceViewId = 'story' | 'characters' | 'clips' | 'video'
+export type WorkspaceViewId = 'story' | 'characters' | 'fragmentedScript' | 'clips' | 'video'
 
 const TABS: { id: WorkspaceViewId; label: string }[] = [
   { id: 'story', label: 'Story' },
   { id: 'characters', label: 'Characters' },
+  { id: 'fragmentedScript', label: 'Fragmented Script' },
   { id: 'clips', label: 'Clips' },
   { id: 'video', label: 'Video' }
 ]
@@ -24,6 +25,11 @@ export function MainWorkspace({ active, onActiveChange, story, onStoryChange }: 
         {active === 'characters' && (
           <div className="workspace-placeholder">
             <p>Characters — coming next.</p>
+          </div>
+        )}
+        {active === 'fragmentedScript' && (
+          <div className="workspace-placeholder">
+            <p>Fragmented Script — coming next.</p>
           </div>
         )}
         {active === 'clips' && (

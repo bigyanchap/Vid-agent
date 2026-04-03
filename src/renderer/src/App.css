@@ -33,6 +33,17 @@
   --action-fill-hover: #948854;
   --action-text-on-fill: #ffffff;
 
+  /* Story suggested-reply chips (slate “Review”-style button) */
+  --suggestion-chip-bg: #5f6d7e;
+  --suggestion-chip-bg-hover: #525f6e;
+
+  /* Cursor-like chat composer (draft text / placeholder) */
+  --chatbox-text: #2596be;
+  --chatbox-placeholder: rgba(37, 150, 190, 0.48);
+  --chatbox-surface: rgba(255, 255, 255, 0.72);
+  --chatbox-shadow: 0 2px 14px rgba(44, 40, 32, 0.07), 0 1px 4px rgba(44, 40, 32, 0.04);
+  --chatbox-shadow-focus: 0 2px 20px rgba(37, 150, 190, 0.14), 0 1px 6px rgba(44, 40, 32, 0.05);
+
   --shadow-modal: 0 16px 48px rgba(44, 40, 32, 0.22);
   --radius-card: 16px;
   --radius-input: 12px;
@@ -180,7 +191,8 @@ body,
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);
-  background: var(--bg-tan);
+  background: var(--bg-chat);
+  border-bottom: 1px solid rgba(201, 194, 168, 0.22);
 }
 
 .agent-chat__messages {
@@ -247,45 +259,81 @@ body,
   font-style: italic;
 }
 
-/* Cursor-style: no rule between transcript and composer; one integrated field */
+/* Composer blends with chat body (same cream as messages — no hard strip line) */
 .agent-chat__composer {
   flex: 0 0 auto;
-  padding: 12px 14px 16px;
-  background: var(--bg-tan);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 14px 18px;
+  background: var(--bg-chat);
+}
+
+.agent-chat__suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.agent-chat__suggestion {
+  padding: 3px 12px;
+  max-width: 100%;
+  border: none;
+  border-radius: 9999px;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: 0.02em;
+  text-align: center;
+  color: #ffffff;
+  background: var(--suggestion-chip-bg);
+  cursor: default;
+  box-shadow: 0 1px 2px rgba(44, 40, 32, 0.15);
+}
+
+.agent-chat__suggestion:hover {
+  background: var(--suggestion-chip-bg-hover);
+}
+
+.agent-chat__suggestion:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .agent-chat__composer-field {
   display: flex;
   align-items: flex-end;
-  gap: 4px;
-  min-height: 44px;
-  padding: 4px 6px 4px 14px;
-  border: 1px solid var(--border-default);
-  border-radius: 12px;
-  background: var(--bg-input-surface);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  gap: 6px;
+  min-height: 42px;
+  padding: 6px 8px 6px 14px;
+  border: 1px solid rgba(201, 194, 168, 0.28);
+  border-radius: 14px;
+  background: var(--chatbox-surface);
+  box-shadow: var(--chatbox-shadow);
+  backdrop-filter: blur(8px);
 }
 
 .agent-chat__composer-field:focus-within {
-  border-color: var(--accent);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.45),
-    0 0 0 1px var(--accent);
+  border-color: rgba(37, 150, 190, 0.35);
+  box-shadow: var(--chatbox-shadow-focus);
 }
 
 .agent-chat__input {
   flex: 1 1 auto;
   min-width: 0;
-  min-height: 22px;
+  min-height: 20px;
   border: none;
   margin: 0;
-  padding: 8px 8px 8px 0;
+  padding: 6px 6px 6px 0;
   font: inherit;
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--text-primary);
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--chatbox-text);
   background: transparent;
   box-shadow: none;
+  caret-color: var(--chatbox-text);
   resize: none;
   overflow-y: hidden;
   overflow-x: hidden;
@@ -295,7 +343,7 @@ body,
 }
 
 .agent-chat__input::placeholder {
-  color: #6b7280;
+  color: var(--chatbox-placeholder);
   opacity: 1;
 }
 
@@ -309,32 +357,33 @@ body,
 }
 
 .agent-chat__send {
-  flex: 0 0 32px;
-  width: 32px;
-  height: 32px;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
   border: none;
   border-radius: var(--radius-send);
-  background: var(--action-fill);
+  background: var(--chatbox-text);
   color: var(--action-text-on-fill);
   cursor: pointer;
+  box-shadow: 0 1px 3px rgba(37, 150, 190, 0.25);
 }
 
 .agent-chat__send:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 .agent-chat__send:not(:disabled):hover {
-  background: var(--action-fill-hover);
+  background: #1e7a9a;
 }
 
 .agent-chat__send:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: 2px solid var(--chatbox-text);
+  outline-offset: 2px;
 }
 
 /* —— Main workspace —— */

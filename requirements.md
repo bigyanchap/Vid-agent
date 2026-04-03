@@ -56,3 +56,6 @@ Development and builds are expected to work on **Windows**, **macOS**, and **Lin
 | 2026-04-03 | UI palette aligned to **Cursor warm light** screenshot: `#F3F0E0` / `#E6E1CF` / `#D9D4BA`, `#A6995F` actions, `#3B82F6` accents; Electron `backgroundColor` `#E6E1CF`. |
 | 2026-04-03 | Agent chat: removed wireframe **video** label + thumbnail; no border between transcript and composer; **Cursor-like** combined input row. |
 | 2026-04-03 | Chat composer: **textarea** auto-height from content, **12px** font, wrap without scrollbar; Enter send, Shift+Enter newline. |
+| 2026-04-03 | **Fragmented Script** tab (between Characters and Clips); **Story**-only chat **suggested replies** (three labels, non-functional until pipeline step). |
+| 2026-04-03 | Suggested-reply chips: slate `#5F6D7E`, white **9px** text, pill (**ellipsoid**), **right-aligned** row. |
+| 2026-04-03 | Chat composer: draft **`#2596be`**, **10px** text; frosted surface + soft shadow; composer area **cream** (no tan seam); send matches teal. |

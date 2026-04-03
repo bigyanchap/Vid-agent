@@ -13,7 +13,18 @@ function nextId(): string {
   return `m-${idSeq}`
 }
 
-export function AgentChat() {
+const STORY_SUGGESTED_REPLIES = [
+  'Generate Characters and Fragments',
+  'Generate Characters, Fragments, and Clips',
+  'Generate whole video at once'
+] as const
+
+type AgentChatProps = {
+  /** When true (Story tab active), show suggested reply chips above the composer. Actions wired in a later step. */
+  showStorySuggestions?: boolean
+}
+
+export function AgentChat({ showStorySuggestions = false }: AgentChatProps) {
   const [committed, setCommitted] = useState<GeminiTurn[]>([])
   const [lines, setLines] = useState<Line[]>([])
   const [draft, setDraft] = useState('')
@@ -97,6 +108,27 @@ export function AgentChat() {
         )}
       </div>
       <div className="agent-chat__composer">
+        {showStorySuggestions && (
+          <div
+            className="agent-chat__suggestions"
+            role="group"
+            aria-label="Suggested replies (not yet available)"
+          >
+            {STORY_SUGGESTED_REPLIES.map((label) => (
+              <button
+                key={label}
+                type="button"
+                className="agent-chat__suggestion"
+                title="Coming soon"
+                onClick={() => {
+                  /* Pipeline triggers — next step */
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="agent-chat__composer-field">
           <textarea
             ref={draftRef}
