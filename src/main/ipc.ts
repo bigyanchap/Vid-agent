@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron'
 import { getGeminiApiKey, setGeminiApiKey } from './config-store'
 import { callGemini, type GeminiTurn } from './gemini'
+import { generateCharacterPortrait } from './gemini-character-portrait'
 import {
   approveCharacters,
   generateAndSaveCharacters,
@@ -20,6 +21,11 @@ export function registerIpc(): void {
   ipcMain.handle('gemini:chat', (_evt, payload: { messages: GeminiTurn[] }) => {
     const messages = Array.isArray(payload?.messages) ? payload.messages : []
     return callGemini(getGeminiApiKey(), messages)
+  })
+
+  ipcMain.handle('gemini:characterPortrait', (_evt, payload: { prompt?: string }) => {
+    const prompt = typeof payload?.prompt === 'string' ? payload.prompt : ''
+    return generateCharacterPortrait(getGeminiApiKey(), prompt)
   })
 
   ipcMain.handle('characters:load', (_evt, sessionId: string) => {

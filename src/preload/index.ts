@@ -5,6 +5,10 @@ export type ChatMessage = { role: 'user' | 'model'; text: string }
 
 export type GeminiChatResult = { text?: string; error?: string }
 
+export type CharacterPortraitResult =
+  | { ok: true; mimeType: string; dataBase64: string }
+  | { ok: false; error: string }
+
 /** Minimal shape for preload typing; full type lives in @shared for renderer */
 export type CharactersDocumentPayload = Record<string, unknown>
 
@@ -14,6 +18,9 @@ const api = {
     ipcRenderer.invoke('config:setGeminiApiKey', key),
   geminiChat: (messages: ChatMessage[]): Promise<GeminiChatResult> =>
     ipcRenderer.invoke('gemini:chat', { messages }),
+
+  geminiCharacterPortrait: (payload: { prompt: string }): Promise<CharacterPortraitResult> =>
+    ipcRenderer.invoke('gemini:characterPortrait', payload),
 
   charactersLoad: (sessionId: string): Promise<CharactersDocumentPayload | null> =>
     ipcRenderer.invoke('characters:load', sessionId),

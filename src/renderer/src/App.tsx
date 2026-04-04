@@ -194,6 +194,10 @@ export default function App() {
   const chatContext =
     activeView === 'story' ? 'story' : activeView === 'characters' ? 'characters' : 'other'
 
+  const appendAgentLine = useCallback((kind: 'user' | 'model' | 'error', text: string) => {
+    agentChatRef.current?.appendLine(kind, text)
+  }, [])
+
   return (
     <div className="workbench" role="application" aria-label="Vid-Agent">
       <header className="workbench__header">
@@ -247,6 +251,7 @@ export default function App() {
             onCharactersUnlock={() => void runUnlockCharacters()}
             fragmentedScriptUnlocked={fragmentedScriptUnlocked}
             onlyStoryUnlocked={onlyStoryUnlocked}
+            onAppendAgentLine={appendAgentLine}
           />
         </div>
 

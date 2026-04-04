@@ -33,6 +33,7 @@ type Props = {
   fragmentedScriptUnlocked: boolean
   /** Lock Characters until Generate Characters / whole-video suggestion is used, or a sheet exists */
   onlyStoryUnlocked: boolean
+  onAppendAgentLine: (kind: 'user' | 'model' | 'error', text: string) => void
 }
 
 export function MainWorkspace({
@@ -53,7 +54,8 @@ export function MainWorkspace({
   onCharactersApproved,
   onCharactersUnlock,
   fragmentedScriptUnlocked,
-  onlyStoryUnlocked
+  onlyStoryUnlocked,
+  onAppendAgentLine
 }: Props) {
   return (
     <section className="main-workspace" aria-label="Editor">
@@ -80,6 +82,7 @@ export function MainWorkspace({
             onDocumentChange={onCharactersDocumentChange}
             onApproved={onCharactersApproved}
             onUnlock={onCharactersUnlock}
+            onAppendAgentLine={onAppendAgentLine}
           />
         )}
         {active === 'fragmentedScript' && (

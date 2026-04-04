@@ -4,12 +4,17 @@ import type { CharactersDocument } from '@shared/characters-types'
 
 type ChatMessage = { role: 'user' | 'model'; text: string }
 
+type CharacterPortraitResult =
+  | { ok: true; mimeType: string; dataBase64: string }
+  | { ok: false; error: string }
+
 declare global {
   interface Window {
     api: {
       getGeminiApiKey: () => Promise<string>
       setGeminiApiKey: (key: string) => Promise<void>
       geminiChat: (messages: ChatMessage[]) => Promise<{ text?: string; error?: string }>
+      geminiCharacterPortrait: (payload: { prompt: string }) => Promise<CharacterPortraitResult>
       charactersLoad: (sessionId: string) => Promise<CharactersDocument | null>
       charactersSave: (
         sessionId: string,

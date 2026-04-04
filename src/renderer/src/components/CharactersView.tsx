@@ -5,6 +5,7 @@ import {
   type CharacterEntry,
   type CharactersDocument
 } from '@shared/characters-types'
+import { buildCharacterPortraitPrompt } from '../../../lib/prompts/character-portrait'
 import { ConfirmDialog } from './ConfirmDialog'
 import './CharactersView.css'
 
@@ -17,6 +18,7 @@ type Props = {
   onDocumentChange: (doc: CharactersDocument) => void
   onApproved: (doc: CharactersDocument) => void
   onUnlock: () => void
+  onAppendAgentLine: (kind: 'user' | 'model' | 'error', text: string) => void
 }
 
 function updateCharacter(
@@ -59,7 +61,8 @@ export function CharactersView({
   onRetryGenerate,
   onDocumentChange,
   onApproved,
-  onUnlock
+  onUnlock,
+  onAppendAgentLine
 }: Props) {
   const [dirtyIndices, setDirtyIndices] = useState<Set<number>>(new Set())
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -273,6 +276,9 @@ export function CharactersView({
           index={index}
           locked={locked}
           dirty={dirtyIndices.has(index)}
+          storyStyle={document.meta.story_style}
+          storyLanguage={document.meta.story_language}
+          onAppendAgentLine={onAppendAgentLine}
           onChange={(next) => {
             onDocumentChange(updateCharacter(document, index, next))
             markDirty(index)
@@ -374,12 +380,26 @@ type CardProps = {
   index: number
   locked: boolean
   dirty: boolean
+  storyStyle: string
+  storyLanguage: string
+  onAppendAgentLine: (kind: 'user' | 'model' | 'error', text: string) => void
   onChange: (c: CharacterEntry) => void
   onSave: () => void
   onRemove: () => void
 }
 
-function CharacterCard({ char, index, locked, dirty, onChange, onSave, onRemove }: CardProps) {
+function CharacterCard({
+  char,
+  index,
+  locked,
+  dirty,
+  storyStyle,
+  storyLanguage,
+  onAppendAgentLine,
+  onChange,
+  onSave,
+  onRemove
+}: CardProps) {
   const dis = locked
 
   const patchIdentity = (k: keyof CharacterEntry['identity'], v: string) =>
@@ -414,6 +434,35 @@ function CharacterCard({ char, index, locked, dirty, onChange, onSave, onRemove 
   }
 
   const idBase = `ch-${char.id}-${index}`
+
+  const [portrait, setPortrait] = useState<{
+    loading: boolean
+    error: string | null
+    dataUrl: string | null
+  }>({ loading: false, error: null, dataUrl: null })
+
+  const handleSeeLooks = useCallback(async () => {
+    const label = char.name.trim() || char.id || `Character ${index + 1}`
+    onAppendAgentLine('user', `See how ${label} looks.`)
+    onAppendAgentLine(
+      'model',
+      `I'm generating a preview image for "${label}" from this character sheet (Gemini image model). One moment…`
+    )
+    setPortrait((prev) => ({ loading: true, error: null, dataUrl: prev.dataUrl }))
+    const prompt = buildCharacterPortraitPrompt(char, storyStyle, storyLanguage)
+    const res = await window.api.geminiCharacterPortrait({ prompt })
+    if (!res.ok) {
+      onAppendAgentLine('error', res.error)
+      setPortrait((prev) => ({ loading: false, error: res.error, dataUrl: prev.dataUrl }))
+      return
+    }
+    const dataUrl = `data:${res.mimeType};base64,${res.dataBase64}`
+    onAppendAgentLine(
+      'model',
+      `Here's a preview image for "${label}". You can generate again anytime if you edit the sheet.`
+    )
+    setPortrait({ loading: false, error: null, dataUrl })
+  }, [char, index, onAppendAgentLine, storyLanguage, storyStyle])
 
   return (
     <article className="character-card" aria-label={`Character ${char.name || char.id}`}>
@@ -602,6 +651,33 @@ function CharacterCard({ char, index, locked, dirty, onChange, onSave, onRemove 
           disabled={dis}
           onChange={(e) => onChange({ ...char, prompt_fragment: e.target.value })}
         />
+      </div>
+
+      <hr className="char-divider" />
+      <div className="char-portrait-block">
+        <button
+          type="button"
+          className="char-portrait-btn"
+          disabled={portrait.loading}
+          onClick={() => void handleSeeLooks()}
+        >
+          {portrait.loading ? 'Generating preview…' : 'See how this character looks'}
+        </button>
+        {portrait.error && (
+          <p className="char-portrait-error" role="alert">
+            {portrait.error}
+          </p>
+        )}
+        {portrait.dataUrl && !portrait.loading && (
+          <figure className="char-portrait-figure">
+            <img
+              className="char-portrait-img"
+              src={portrait.dataUrl}
+              alt={`Generated preview of ${char.name || char.id || 'character'}`}
+            />
+            <figcaption className="char-portrait-caption">Gemini preview (may include SynthID watermark)</figcaption>
+          </figure>
+        )}
       </div>
     </article>
   )
