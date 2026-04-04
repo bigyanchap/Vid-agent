@@ -168,7 +168,7 @@ export function CharactersView({
         )}
         <p className="characters-panel__empty">
           No character sheet yet. Add a character manually, or from the Story tab use{' '}
-          <strong>Generate Characters</strong> in the chat suggestions.
+          <strong>Generate Characters from story</strong> in the chat suggestions.
         </p>
         <div className="characters-panel__manual-actions">
           <button

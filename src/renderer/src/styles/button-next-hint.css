@@ -1,0 +1,105 @@
+/**
+ * Reusable “next action” emphasis for buttons (or other controls).
+ *
+ * Usage:
+ *   <span class="btn-next-hint btn-next-hint--glow">
+ *     <button type="button" class="your-btn btn-next-hint__target">…</button>
+ *   </span>
+ *
+ * Modifiers:
+ *   .btn-next-hint          — rainbow border ring; hues drift around the edge (no whole-layer spin)
+ *   .btn-next-hint--glow    — soft pulse on the inner .btn-next-hint__target
+ *
+ * Rainbow only: omit .btn-next-hint--glow. Glow only: use --glow without .btn-next-hint
+ * is not supported; use a plain class for glow-only if needed, or empty ::before.
+ */
+
+@property --btn-next-hint-conic-from {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes btn-next-hint-glow-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 1px 2px rgba(44, 40, 32, 0.14),
+      0 0 0 0 rgba(147, 180, 240, 0);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow:
+      0 1px 3px rgba(44, 40, 32, 0.1),
+      0 0 18px 4px rgba(120, 165, 235, 0.42);
+    filter: brightness(1.07);
+  }
+}
+
+/** Shifts where the conic rainbow starts so colors flow around the border (ring stays put). */
+@keyframes btn-next-hint-border-spectrum {
+  from {
+    --btn-next-hint-conic-from: 0deg;
+  }
+  to {
+    --btn-next-hint-conic-from: 360deg;
+  }
+}
+
+.btn-next-hint {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+  padding: 1px;
+  border-radius: 9999px;
+  max-width: 100%;
+  box-sizing: border-box;
+  vertical-align: middle;
+}
+
+.btn-next-hint::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  z-index: 0;
+  --btn-next-hint-conic-from: 0deg;
+  background: conic-gradient(
+    from var(--btn-next-hint-conic-from),
+    hsl(0 90% 58%),
+    hsl(42 95% 56%),
+    hsl(88 80% 48%),
+    hsl(145 75% 46%),
+    hsl(195 85% 50%),
+    hsl(238 82% 58%),
+    hsl(285 78% 58%),
+    hsl(328 88% 60%),
+    hsl(0 90% 58%)
+  );
+  animation: btn-next-hint-border-spectrum 10s linear infinite;
+}
+
+.btn-next-hint > .btn-next-hint__target {
+  position: relative;
+  z-index: 1;
+  border-radius: inherit;
+}
+
+.btn-next-hint--glow > .btn-next-hint__target {
+  animation: btn-next-hint-glow-pulse 5.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-next-hint::before {
+    animation: none;
+    --btn-next-hint-conic-from: 40deg;
+    opacity: 0.92;
+  }
+
+  .btn-next-hint--glow > .btn-next-hint__target {
+    animation: none;
+    box-shadow:
+      0 1px 2px rgba(44, 40, 32, 0.14),
+      0 0 0 1px rgba(147, 180, 240, 0.55);
+  }
+}

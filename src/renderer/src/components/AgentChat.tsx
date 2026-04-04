@@ -1,4 +1,5 @@
 import {
+  Fragment,
   forwardRef,
   useCallback,
   useId,
@@ -7,6 +8,7 @@ import {
   useRef,
   useState
 } from 'react'
+import { btnNextHint, btnNextHintWrapClassNames } from '../styles/buttonNextHint'
 
 type GeminiTurn = { role: 'user' | 'model'; text: string }
 
@@ -22,7 +24,7 @@ function nextId(): string {
 }
 
 const STORY_SUGGESTIONS = [
-  { key: 'chars', label: 'Generate Characters' },
+  { key: 'chars', label: 'Generate Characters from story' },
   { key: 'video', label: 'Generate whole video at once from the story' }
 ] as const
 
@@ -42,6 +44,8 @@ type AgentChatProps = {
   wholeVideoPending?: boolean
   canApproveCharacters?: boolean
   onGenerateCharacters?: () => void
+  /** Soft pulse + rainbow border (spectrum drifts along the edge) on “Generate Characters from story”. */
+  gentlePulseGenerateCharacters?: boolean
   onGenerateWholeVideo?: () => void
   onApproveCharactersFromChat?: () => void
 }
@@ -100,6 +104,7 @@ export const AgentChat = forwardRef<AgentChatHandle, AgentChatProps>(function Ag
     wholeVideoPending = false,
     canApproveCharacters = false,
     onGenerateCharacters,
+    gentlePulseGenerateCharacters = false,
     onGenerateWholeVideo,
     onApproveCharactersFromChat
   },
@@ -214,11 +219,14 @@ export const AgentChat = forwardRef<AgentChatHandle, AgentChatProps>(function Ag
           >
             {STORY_SUGGESTIONS.map(({ key, label }) => {
               const disabled = pipelineBusy || !storyReady
-              return (
+              const pulseNext =
+                key === 'chars' &&
+                gentlePulseGenerateCharacters &&
+                !disabled
+              const btn = (
                 <button
-                  key={key}
                   type="button"
-                  className="agent-chat__suggestion"
+                  className={`agent-chat__suggestion${pulseNext ? ` ${btnNextHint.target}` : ''}`}
                   disabled={disabled}
                   onClick={() => {
                     if (key === 'chars' && onGenerateCharacters) onGenerateCharacters()
@@ -227,6 +235,13 @@ export const AgentChat = forwardRef<AgentChatHandle, AgentChatProps>(function Ag
                 >
                   {label}
                 </button>
+              )
+              return pulseNext ? (
+                <span key={key} className={btnNextHintWrapClassNames({ glow: true })}>
+                  {btn}
+                </span>
+              ) : (
+                <Fragment key={key}>{btn}</Fragment>
               )
             })}
           </div>

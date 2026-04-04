@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CharactersDocument } from '@shared/characters-types'
+import {
+  buildStyleSetupBlockForGeneration,
+  SAMPLE_STYLE_SETUP_VALUES,
+  type StyleSetupKey,
+  STYLE_SETUP_KEYS
+} from './sample-story'
 import { AgentChat, type AgentChatHandle } from './components/AgentChat'
 import { MainWorkspace, type WorkspaceViewId } from './components/MainWorkspace'
 import { SettingsModal } from './components/SettingsModal'
@@ -8,18 +14,29 @@ function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms))
 }
 
-/** Prepends theme/style/setup to the story for Gemini when the user filled that box. */
-function storyForGeneration(story: string, themeStyleSetup: string): string {
-  const meta = themeStyleSetup.trim()
-  if (!meta) return story
-  return `Theme, style & setup:\n${meta}\n\n---\n\n${story}`
+function emptyStyleSetupFields(): Record<StyleSetupKey, string> {
+  return Object.fromEntries(STYLE_SETUP_KEYS.map((k) => [k, ''])) as Record<StyleSetupKey, string>
+}
+
+const LONG_STORY_WORD_THRESHOLD = 200
+
+function countWords(text: string): number {
+  const t = text.trim()
+  if (!t) return 0
+  return t.split(/\s+/).filter(Boolean).length
+}
+
+/** Prepends Theme / Style / … block for Gemini; empty inputs use the sample-story fallback phrase. */
+function storyForGeneration(story: string, styleSetupFields: Record<StyleSetupKey, string>): string {
+  const block = buildStyleSetupBlockForGeneration(styleSetupFields)
+  return `Theme, style & setup:\n${block}\n\n---\n\n${story}`
 }
 
 export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [activeView, setActiveView] = useState<WorkspaceViewId>('story')
   const [story, setStory] = useState('')
-  const [themeStyleSetup, setThemeStyleSetup] = useState('')
+  const [styleSetupFields, setStyleSetupFields] = useState(emptyStyleSetupFields)
   const [sessionId] = useState(() => crypto.randomUUID())
 
   const [charactersDoc, setCharactersDoc] = useState<CharactersDocument | null>(null)
@@ -34,11 +51,19 @@ export default function App() {
   const [wholeVideoPending, setWholeVideoPending] = useState(false)
   /** Characters tab unlocks after Generate Characters or whole-video suggestion is used, or when a sheet exists on disk. */
   const [storyPipelineActionTaken, setStoryPipelineActionTaken] = useState(false)
+  /** After Insert Sample Story with a long sample, gently highlight Generate Characters in chat. */
+  const [nudgeGenerateCharactersNext, setNudgeGenerateCharactersNext] = useState(false)
   const agentChatRef = useRef<AgentChatHandle>(null)
 
   useEffect(() => {
     void window.api.charactersLoad(sessionId).then((d) => setCharactersDoc(d))
   }, [sessionId])
+
+  useEffect(() => {
+    if (countWords(story) <= LONG_STORY_WORD_THRESHOLD) {
+      setNudgeGenerateCharactersNext(false)
+    }
+  }, [story])
 
   const fragmentedScriptUnlocked = Boolean(charactersDoc?.meta.approved && charactersDoc?.meta.locked)
 
@@ -51,13 +76,17 @@ export default function App() {
   )
 
   const runGenerateCharacters = useCallback(async () => {
+    setNudgeGenerateCharactersNext(false)
     setStoryPipelineActionTaken(true)
     setCharactersGenError(null)
-    agentChatRef.current?.appendLine('user', 'Generate Characters')
+    agentChatRef.current?.appendLine('user', 'Generate Characters from the story')
     agentChatRef.current?.appendLine('model', 'Creating your characters from your story…')
     setCharactersGenerating(true)
     try {
-      const res = await window.api.charactersGenerate(sessionId, storyForGeneration(story, themeStyleSetup))
+      const res = await window.api.charactersGenerate(
+        sessionId,
+        storyForGeneration(story, styleSetupFields)
+      )
       if (res.ok) {
         setCharactersDoc(res.data)
         agentChatRef.current?.appendLine(
@@ -77,7 +106,7 @@ export default function App() {
     } finally {
       setCharactersGenerating(false)
     }
-  }, [sessionId, story, themeStyleSetup])
+  }, [sessionId, story, styleSetupFields])
 
   const runUnlockCharacters = useCallback(async () => {
     setCharactersGenError(null)
@@ -153,7 +182,7 @@ export default function App() {
     setWholeVideoPending(false)
     agentChatRef.current?.appendLine(
       'model',
-      'Making the whole video in one go is not available in this version yet. For now, use Generate Characters, then review and approve on the Characters tab to move forward.'
+      'Making the whole video in one go is not available in this version yet. For now, use Generate Characters from story, then review and approve on the Characters tab to move forward.'
     )
   }, [story])
 
@@ -198,8 +227,16 @@ export default function App() {
             onActiveChange={setActiveView}
             story={story}
             onStoryChange={setStory}
-            themeStyleSetup={themeStyleSetup}
-            onThemeStyleSetupChange={setThemeStyleSetup}
+            styleSetupFields={styleSetupFields}
+            onStyleSetupFieldChange={(key, value) =>
+              setStyleSetupFields((prev) => ({ ...prev, [key]: value }))
+            }
+            onStyleSetupFieldsSample={() => setStyleSetupFields({ ...SAMPLE_STYLE_SETUP_VALUES })}
+            onSampleStoryInserted={(insertedText) => {
+              if (countWords(insertedText) > LONG_STORY_WORD_THRESHOLD) {
+                setNudgeGenerateCharactersNext(true)
+              }
+            }}
             sessionId={sessionId}
             charactersDocument={charactersDoc}
             charactersGenerating={charactersGenerating}
@@ -223,6 +260,7 @@ export default function App() {
             wholeVideoPending={wholeVideoPending}
             canApproveCharacters={canApproveCharacters}
             onGenerateCharacters={() => void runGenerateCharacters()}
+            gentlePulseGenerateCharacters={nudgeGenerateCharactersNext}
             onGenerateWholeVideo={() => void runGenerateWholeVideo()}
             onApproveCharactersFromChat={() => void runApproveFromChat()}
           />

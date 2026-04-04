@@ -1,4 +1,5 @@
 import type { CharactersDocument } from '@shared/characters-types'
+import type { StyleSetupKey } from '../sample-story'
 import { StoryView } from './StoryView'
 import { CharactersView } from './CharactersView'
 
@@ -17,8 +18,10 @@ type Props = {
   onActiveChange: (id: WorkspaceViewId) => void
   story: string
   onStoryChange: (value: string) => void
-  themeStyleSetup: string
-  onThemeStyleSetupChange: (value: string) => void
+  styleSetupFields: Record<StyleSetupKey, string>
+  onStyleSetupFieldChange: (key: StyleSetupKey, value: string) => void
+  onStyleSetupFieldsSample: () => void
+  onSampleStoryInserted?: (insertedStoryText: string) => void
   sessionId: string
   charactersDocument: CharactersDocument | null
   charactersGenerating: boolean
@@ -37,8 +40,10 @@ export function MainWorkspace({
   onActiveChange,
   story,
   onStoryChange,
-  themeStyleSetup,
-  onThemeStyleSetupChange,
+  styleSetupFields,
+  onStyleSetupFieldChange,
+  onStyleSetupFieldsSample,
+  onSampleStoryInserted,
   sessionId,
   charactersDocument,
   charactersGenerating,
@@ -59,8 +64,10 @@ export function MainWorkspace({
           <StoryView
             story={story}
             onStoryChange={onStoryChange}
-            themeStyleSetup={themeStyleSetup}
-            onThemeStyleSetupChange={onThemeStyleSetupChange}
+            styleSetupFields={styleSetupFields}
+            onStyleSetupFieldChange={onStyleSetupFieldChange}
+            onStyleSetupFieldsSample={onStyleSetupFieldsSample}
+            onSampleStoryInserted={onSampleStoryInserted}
           />
         )}
         {active === 'characters' && (

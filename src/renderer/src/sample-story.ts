@@ -1,24 +1,49 @@
 /** Paragraphs use \\n\\n only so lines wrap to the full textarea width (no narrow hard-wrapped column). */
-export const SAMPLE_STORY = `In the age before ages, when the world was young and the gods still walked among men, a great sage named Satyavrata knelt at the banks of the Kritamala river, offering his morning prayers. As he cupped the sacred water in his palms, he felt something move — a tiny fish, no bigger than his thumb, trembling in the hollow of his hands.
+export const SAMPLE_STORY = `Once upon a time, a little rabbit named Hoppy lived in a sunny meadow.  Hoppy loved to explore but was scared of the dark forest.  One day, his friend Squirrel found a shiny red apple.  "Let's share it!" said Squirrel.  They hopped toward the forest edge.  Suddenly, a big wind blew leaves everywhere.  Hoppy hid behind a bush, trembling.  Squirrel laughed, "It's just wind, silly!"  They found more friends: Bird and Turtle.  Together, they entered the forest bravely.  Bird sang a happy song to guide them.  Turtle moved slowly but never gave up.  Deep inside, they discovered a sparkling stream.  Hoppy jumped with joy and splashed water.  They shared the apple under a tall tree.  The sun peeked through, chasing away fears.  Hoppy learned friends make everything fun.  From then on, he visited the forest daily.  All the animals played and laughed together.  And they lived happily ever after.  The friends planned picnics beside the stream.  Fireflies arrived at dusk like tiny lanterns.  Hoppy learned that courage grows a little every day.  Seasons changed, yet the meadow always welcomed them home.  Old maps led to hidden clearings.  They drew pictures in the sand with sticks.  Every journey felt safer with company.  They celebrated small wins and kept exploring together.`
 
-"Save me," the fish whispered, its golden scales catching the first light of dawn. "The great waters are full of creatures that wish to devour me."
 
-Satyavrata, moved by compassion, placed the fish in his water pot and carried it home. But by morning the fish had grown too large for the pot. He moved it to a jar. By evening, too large for the jar. He carried it to the village well. By sunrise, too large for the well. He carried it to the sacred lake. Too large. Finally, with great effort, he carried it to the ocean itself and released it into the endless deep.
+export const STYLE_SETUP_KEYS = ['Theme', 'Style', 'Setup', 'Mood', 'Era', 'World', 'Constraints'] as const
+export type StyleSetupKey = (typeof STYLE_SETUP_KEYS)[number]
 
-The fish rose from the waves, vast as a mountain, its golden body blotting out the horizon. Its single horn caught the moonlight like a blade of fire. And then Satyavrata understood — this was no fish. This was Vishnu himself, the Preserver of all worlds, descended in his first form: Matsya, the great fish.
+/** Sent to the model when a Theme / Style / … field is left blank. */
+export const STYLE_SETUP_VALUE_WHEN_EMPTY = 'Choose yourself wisely.'
 
-"Satyavrata," the divine voice rolled across the waters like thunder, "in seven days, the cosmic waters of dissolution will rise and swallow all creation. The demon Shankhasura has stolen the sacred Vedas from Brahma while he slept, and without the Vedas, the universe cannot be reborn. You must build a great boat. Gather the seven sages, the seeds of all plants, and the animals of the earth. When the floods come, tie your vessel to my horn with the great serpent Vasuki as your rope. I will pull you through the storm of destruction."
+export const SAMPLE_STYLE_SETUP_VALUES: Record<StyleSetupKey, string> = {
+  Theme: 'overcoming fear with friendship and bravery',
+  Style: 'Anime Cartoon',
+  Setup: 'light forest, grass, rivers',
+  Mood: 'playful, adventurous, curious',
+  Era: 'Medieval',
+  World: 'Medieval Forest',
+  Constraints: 'no magic, no superpowers'
+}
 
-Satyavrata obeyed without question. For seven days he built, he gathered, he prepared. On the seventh night, the sky cracked open. The oceans rose as walls of black water and swallowed the mountains whole. Lightning tore the heavens. The stars went dark one by one.
+/** Placeholder hints for each value field (same order as {@link STYLE_SETUP_KEYS}). */
+export const STYLE_SETUP_PLACEHOLDERS: Record<StyleSetupKey, string> = {
+  Theme: 'e.g. overcoming fear with friendship and bravery',
+  Style: 'e.g. Anime Cartoon',
+  Setup: 'e.g. light forest, grass, rivers',
+  Mood: 'e.g. playful, adventurous',
+  Era: 'e.g. Medieval',
+  World: 'e.g. Medieval Forest',
+  Constraints: 'e.g. No talking animals'
+}
 
-But Matsya came.
+export function buildStyleSetupBlock(fields: Record<StyleSetupKey, string>): string {
+  return STYLE_SETUP_KEYS.map((k) => {
+    const v = fields[k].trim()
+    return v ? `${k}: ${v}` : ''
+  })
+    .filter(Boolean)
+    .join('\n')
+}
 
-Vast beyond all sight, golden in the darkness, horn blazing like a torch against the end of the world. Satyavrata lashed the boat to the great horn with the serpent Vasuki, and Matsya pulled them forward through the churning void — through the death of one universe and the breath before the next.
+/** Every key is included; blanks become {@link STYLE_SETUP_VALUE_WHEN_EMPTY} (for Gemini). */
+export function buildStyleSetupBlockForGeneration(fields: Record<StyleSetupKey, string>): string {
+  return STYLE_SETUP_KEYS.map((k) => {
+    const v = fields[k].trim()
+    return `${k}: ${v || STYLE_SETUP_VALUE_WHEN_EMPTY}`
+  }).join('\n')
+}
 
-Deep in the cosmic waters, Matsya dove after Shankhasura, who fled through the darkness clutching the stolen Vedas to his chest. The great fish moved like lightning through the deep. The demon turned to fight. The battle shook the waters of dissolution themselves. And when it was over, Matsya rose with the sacred Vedas held gently in his mouth, unharmed, undamaged, still carrying every word of creation within them.
-
-He returned them to Brahma, who woke from his sleep and began again.
-
-The waters slowly receded. The earth rose, new and clean and silent. Satyavrata stepped off the boat onto warm soil and looked back at the ocean. The great golden fish surfaced once, its ancient eye meeting his across the water.
-
-Then Matsya was gone. And the world began again.`
+export const SAMPLE_THEME_STYLE_SETUP = `${buildStyleSetupBlock(SAMPLE_STYLE_SETUP_VALUES)}\n`
