@@ -26,7 +26,7 @@ type Props = {
   onCharactersDocumentChange: (doc: CharactersDocument) => void
   onRetryCharactersGenerate: () => void
   onCharactersApproved: (doc: CharactersDocument) => void
-  onCharactersUnlockRegenerate: () => void
+  onCharactersUnlock: () => void
   fragmentedScriptUnlocked: boolean
   /** Lock Characters until Generate Characters / whole-video suggestion is used, or a sheet exists */
   onlyStoryUnlocked: boolean
@@ -46,7 +46,7 @@ export function MainWorkspace({
   onCharactersDocumentChange,
   onRetryCharactersGenerate,
   onCharactersApproved,
-  onCharactersUnlockRegenerate,
+  onCharactersUnlock,
   fragmentedScriptUnlocked,
   onlyStoryUnlocked
 }: Props) {
@@ -66,14 +66,13 @@ export function MainWorkspace({
         {active === 'characters' && (
           <CharactersView
             sessionId={sessionId}
-            story={story}
             document={charactersDocument}
             isGenerating={charactersGenerating}
             generateError={charactersGenerateError}
             onRetryGenerate={onRetryCharactersGenerate}
             onDocumentChange={onCharactersDocumentChange}
             onApproved={onCharactersApproved}
-            onUnlockRegenerate={onCharactersUnlockRegenerate}
+            onUnlock={onCharactersUnlock}
           />
         )}
         {active === 'fragmentedScript' && (

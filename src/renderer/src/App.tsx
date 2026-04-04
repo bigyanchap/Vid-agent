@@ -79,40 +79,33 @@ export default function App() {
     }
   }, [sessionId, story, themeStyleSetup])
 
-  const runUnlockRegenerate = useCallback(async () => {
-    const t = story.trim()
-    if (!t) return
+  const runUnlockCharacters = useCallback(async () => {
     setCharactersGenError(null)
-    agentChatRef.current?.appendLine('user', 'Unlock & Regenerate')
-    agentChatRef.current?.appendLine(
-      'model',
-      'Clearing old saved data and building new characters from your story…'
-    )
+    agentChatRef.current?.appendLine('user', 'Unlock')
+    agentChatRef.current?.appendLine('model', 'Unlocking your character sheet for editing…')
     setCharactersGenerating(true)
     try {
-      const res = await window.api.charactersRegenerate(sessionId, storyForGeneration(story, themeStyleSetup))
+      const res = await window.api.charactersUnlock(sessionId)
       if (res.ok) {
         setCharactersDoc(res.data)
         agentChatRef.current?.appendLine(
           'model',
-          'Done — your new characters are ready.'
+          'Done — your characters are unlocked for editing. Saved script breakdown data was cleared; approve again when you are ready to continue.'
         )
       } else {
         setCharactersGenError(res.error)
         agentChatRef.current?.appendLine('error', res.error)
-        setCharactersDoc(null)
       }
       setActiveView('characters')
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       setCharactersGenError(msg)
       agentChatRef.current?.appendLine('error', msg)
-      setCharactersDoc(null)
       setActiveView('characters')
     } finally {
       setCharactersGenerating(false)
     }
-  }, [sessionId, story, themeStyleSetup])
+  }, [sessionId])
 
   const runApproveFromChat = useCallback(async () => {
     const doc = charactersDocRef.current
@@ -214,7 +207,7 @@ export default function App() {
             onCharactersDocumentChange={setCharactersDoc}
             onRetryCharactersGenerate={() => void runGenerateCharacters()}
             onCharactersApproved={onCharactersApproved}
-            onCharactersUnlockRegenerate={() => void runUnlockRegenerate()}
+            onCharactersUnlock={() => void runUnlockCharacters()}
             fragmentedScriptUnlocked={fragmentedScriptUnlocked}
             onlyStoryUnlocked={onlyStoryUnlocked}
           />

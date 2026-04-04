@@ -99,6 +99,7 @@
 }
 
 .characters-panel__approve {
+  margin-bottom: 10px;
   padding: 6px 14px;
   border-radius: 6px;
   border: 1px solid var(--action-fill);
@@ -128,6 +129,7 @@
 
 .characters-panel__locked-card {
   margin-top: 4px;
+  margin-bottom: 10px;
   padding: 14px 16px 16px;
   border: 1px solid var(--border-default);
   border-radius: 8px;

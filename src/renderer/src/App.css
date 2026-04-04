@@ -682,7 +682,7 @@ body,
   border-color: var(--accent);
 }
 
-/* —— Settings modal —— */
+/* —— Settings modal (same palette / type scale as workbench + story) —— */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -690,87 +690,112 @@ body,
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(44, 40, 32, 0.4);
-  padding: 24px;
+  background: rgba(44, 40, 32, 0.38);
+  padding: 20px;
+  backdrop-filter: blur(2px);
 }
 
 .modal {
-  width: min(440px, 100%);
+  width: min(400px, 100%);
   max-height: min(90vh, 520px);
   display: flex;
   flex-direction: column;
   border: 1px solid var(--border-default);
-  border-radius: 10px;
-  background: var(--bg-canvas);
+  /* Subtle corners — matches inputs/cards; overflow clips header/footer flush */
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--bg-input-surface);
   box-shadow: var(--shadow-modal);
+  font-size: 12px;
+  color: var(--text-primary);
 }
 
 .modal__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
+  gap: 10px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--border-default);
+  background: var(--bg-tan);
 }
 
 .modal__title {
   margin: 0;
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 600;
+  letter-spacing: 0.02em;
   color: var(--text-primary);
 }
 
 .modal__close {
-  border: none;
-  background: transparent;
-  font-size: 22px;
+  flex: 0 0 auto;
+  border: 1px solid var(--border-default);
+  background: var(--bg-cream);
+  font-size: 14px;
   line-height: 1;
-  color: var(--text-muted);
+  font-weight: 600;
+  color: var(--text-secondary);
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
+  padding: 2px 8px 4px;
+  border-radius: var(--radius-btn);
 }
 
 .modal__close:hover {
-  background: var(--bg-muted);
+  background: var(--bg-active);
   color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.modal__close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .modal__body {
-  padding: 16px;
+  padding: 12px 12px 14px;
   overflow: auto;
+  background: var(--bg-canvas);
 }
 
-.field-label {
+.modal-field__label {
   display: block;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
   margin-bottom: 6px;
 }
 
-.field-input {
+.modal-field__input {
+  box-sizing: border-box;
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--border-default);
-  border-radius: 8px;
+  padding: 7px 9px;
+  border: 1px solid #c9c2a8;
+  border-radius: 3px;
   font: inherit;
-  font-size: 13px;
+  font-size: 10px;
+  font-family: ui-monospace, 'Cascadia Code', 'Segoe UI Mono', monospace;
+  line-height: 1.45;
   color: var(--text-primary);
   background: var(--bg-input);
+  box-shadow: inset 0 1px 2px rgba(44, 40, 32, 0.06);
 }
 
-.field-input:focus-visible {
+.modal-field__input::placeholder {
+  color: var(--text-muted);
+  font-family: inherit;
+}
+
+.modal-field__input:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 0;
   border-color: var(--accent);
 }
 
-.field-hint {
-  margin: 10px 0 0;
-  font-size: 12px;
+.modal-field__hint {
+  margin: 8px 0 0;
+  font-size: 9px;
   line-height: 1.45;
   color: var(--text-muted);
 }
@@ -779,55 +804,136 @@ body,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 10px;
+  padding: 10px 12px;
   border-top: 1px solid var(--border-default);
+  background: var(--bg-muted);
 }
 
 .modal__saved {
-  font-size: 12px;
-  color: var(--accent);
-  font-weight: 500;
+  font-size: 9px;
+  font-weight: 600;
+  color: #2a5c3e;
+}
+
+.modal__saved-placeholder {
+  min-width: 1px;
+  min-height: 1em;
 }
 
 .modal__actions {
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 6px;
   margin-left: auto;
 }
 
-.btn {
-  padding: 6px 14px;
+.modal-btn {
+  padding: 5px 12px;
   border-radius: 6px;
   font: inherit;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 10px;
+  font-weight: 600;
   cursor: pointer;
   border: 1px solid transparent;
 }
 
-.btn--secondary {
+.modal-btn--secondary {
   border-color: var(--border-default);
   background: var(--bg-canvas);
   color: var(--text-primary);
 }
 
-.btn--secondary:hover {
-  background: var(--bg-muted);
+.modal-btn--secondary:hover {
+  background: var(--bg-active);
+  border-color: var(--border-strong);
 }
 
-.btn--primary {
+.modal-btn--primary {
   background: var(--action-fill);
   color: var(--action-text-on-fill);
   border-color: var(--action-fill);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
-.btn--primary:hover {
+.modal-btn--primary:hover {
   background: var(--action-fill-hover);
   border-color: var(--action-fill-hover);
 }
 
-.btn:focus-visible {
+.modal-btn:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+.modal-btn--danger {
+  background: #f5ebe8;
+  color: #6b3d38;
+  border-color: #c97a6e;
+}
+
+.modal-btn--danger:hover {
+  background: #ede3df;
+  border-color: #b86a5e;
+}
+
+/* Confirm dialog (Unlock, remove character, …) */
+.confirm-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(44, 40, 32, 0.38);
+  padding: 20px;
+  backdrop-filter: blur(2px);
+}
+
+.confirm-dialog {
+  width: min(380px, 100%);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--bg-input-surface);
+  box-shadow: var(--shadow-modal);
+}
+
+.confirm-dialog__header {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-tan);
+}
+
+.confirm-dialog__title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+}
+
+.confirm-dialog__body {
+  padding: 12px 12px 14px;
+  background: var(--bg-canvas);
+}
+
+.confirm-dialog__message {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.confirm-dialog__footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border-default);
+  background: var(--bg-muted);
 }

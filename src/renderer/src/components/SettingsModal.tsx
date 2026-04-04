@@ -40,29 +40,29 @@ export function SettingsModal({ open, onClose }: Props) {
           </button>
         </div>
         <div className="modal__body">
-          <label className="field-label" htmlFor="gemini-key">
-            GEMINI_API_KEY
+          <label className="modal-field__label" htmlFor="gemini-key">
+            Gemini API key
           </label>
           <input
             id="gemini-key"
-            className="field-input"
+            className="modal-field__input"
             type="password"
             autoComplete="off"
             placeholder="Paste your Google AI Studio key"
             value={key}
             onChange={(e) => setKey(e.target.value)}
           />
-          <p className="field-hint">
+          <p className="modal-field__hint">
             Stored locally in your app data folder. Used only to call the Gemini API from this app.
           </p>
         </div>
         <div className="modal__footer">
-          {saved ? <span className="modal__saved">Saved.</span> : <span />}
+          {saved ? <span className="modal__saved">Saved.</span> : <span className="modal__saved-placeholder" />}
           <div className="modal__actions">
-            <button type="button" className="btn btn--secondary" onClick={onClose}>
+            <button type="button" className="modal-btn modal-btn--secondary" onClick={onClose}>
               Close
             </button>
-            <button type="button" className="btn btn--primary" onClick={() => void handleSave()}>
+            <button type="button" className="modal-btn modal-btn--primary" onClick={() => void handleSave()}>
               Save
             </button>
           </div>

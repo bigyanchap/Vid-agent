@@ -5,18 +5,18 @@ import {
   type CharacterEntry,
   type CharactersDocument
 } from '@shared/characters-types'
+import { ConfirmDialog } from './ConfirmDialog'
 import './CharactersView.css'
 
 type Props = {
   sessionId: string
-  story: string
   document: CharactersDocument | null
   isGenerating: boolean
   generateError: string | null
   onRetryGenerate: () => void
   onDocumentChange: (doc: CharactersDocument) => void
   onApproved: (doc: CharactersDocument) => void
-  onUnlockRegenerate: () => void
+  onUnlock: () => void
 }
 
 function updateCharacter(
@@ -53,18 +53,19 @@ function remapDirtyAfterRemove(dirty: Set<number>, removedIndex: number): Set<nu
 
 export function CharactersView({
   sessionId,
-  story,
   document,
   isGenerating,
   generateError,
   onRetryGenerate,
   onDocumentChange,
   onApproved,
-  onUnlockRegenerate
+  onUnlock
 }: Props) {
   const [dirtyIndices, setDirtyIndices] = useState<Set<number>>(new Set())
   const [saveError, setSaveError] = useState<string | null>(null)
   const [approving, setApproving] = useState(false)
+  const [unlockDialogOpen, setUnlockDialogOpen] = useState(false)
+  const [removeConfirmIndex, setRemoveConfirmIndex] = useState<number | null>(null)
 
   useEffect(() => {
     setDirtyIndices(new Set())
@@ -118,15 +119,15 @@ export function CharactersView({
     }
   }, [sessionId, onApproved])
 
-  const handleUnlockRegenerate = useCallback(() => {
-    if (!story.trim()) return
-    const ok = window.confirm(
-      'This will delete your saved character file and any script breakdown data, then rebuild characters from your current story. You will need to approve again. Continue?'
-    )
-    if (!ok) return
+  const openUnlockDialog = useCallback(() => {
+    setUnlockDialogOpen(true)
+  }, [])
+
+  const confirmUnlock = useCallback(() => {
+    setUnlockDialogOpen(false)
     setSaveError(null)
-    onUnlockRegenerate()
-  }, [story, onUnlockRegenerate])
+    onUnlock()
+  }, [onUnlock])
 
   if (isGenerating && !document) {
     return (
@@ -279,10 +280,7 @@ export function CharactersView({
           onSave={() => void saveCharacterBox(index)}
           onRemove={() => {
             if (locked) return
-            const ok = window.confirm('Remove this character from the project?')
-            if (!ok) return
-            onDocumentChange(removeCharacterAt(document, index))
-            setDirtyIndices((prev) => remapDirtyAfterRemove(prev, index))
+            setRemoveConfirmIndex(index)
           }}
         />
       ))}
@@ -315,23 +313,18 @@ export function CharactersView({
             <button
               type="button"
               className="characters-panel__unlock-btn"
-              disabled={isGenerating || !story.trim()}
-              title={
-                !story.trim()
-                  ? 'Write or paste your story on the Story tab first.'
-                  : undefined
-              }
-              onClick={() => handleUnlockRegenerate()}
+              disabled={isGenerating}
+              onClick={() => openUnlockDialog()}
             >
-              {isGenerating ? 'Working…' : 'Unlock & Regenerate'}
+              {isGenerating ? 'Working…' : 'Unlock'}
             </button>
             <div className="characters-panel__unlock-warning" role="note">
               <span className="characters-panel__unlock-warning-icon" aria-hidden="true">
                 ⚠
               </span>
               <p>
-                This removes saved character data and script breakdown files, then creates a fresh character
-                pass from your story. You will need to approve again before continuing.
+                Unlocking lets you edit your saved character sheet again. Any saved script breakdown for this
+                project will be cleared. You will need to approve your characters again before continuing.
               </p>
             </div>
           </div>
@@ -346,6 +339,32 @@ export function CharactersView({
           </button>
         )}
       </div>
+
+      <ConfirmDialog
+        open={unlockDialogOpen}
+        title="Unlock for editing?"
+        message="Your character sheet will stay as it is; you can edit it after unlocking. Saved script breakdown data will be cleared. You will need to approve your characters again before continuing."
+        confirmLabel="Unlock"
+        cancelLabel="Cancel"
+        onConfirm={confirmUnlock}
+        onCancel={() => setUnlockDialogOpen(false)}
+      />
+      <ConfirmDialog
+        open={removeConfirmIndex !== null}
+        title="Remove character?"
+        message="Remove this character from the project?"
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        confirmDanger
+        onConfirm={() => {
+          if (removeConfirmIndex === null || !document) return
+          const idx = removeConfirmIndex
+          onDocumentChange(removeCharacterAt(document, idx))
+          setDirtyIndices((prev) => remapDirtyAfterRemove(prev, idx))
+          setRemoveConfirmIndex(null)
+        }}
+        onCancel={() => setRemoveConfirmIndex(null)}
+      />
     </div>
   )
 }
