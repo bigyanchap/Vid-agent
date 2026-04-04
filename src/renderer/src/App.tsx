@@ -4,6 +4,10 @@ import { AgentChat, type AgentChatHandle } from './components/AgentChat'
 import { MainWorkspace, type WorkspaceViewId } from './components/MainWorkspace'
 import { SettingsModal } from './components/SettingsModal'
 
+function delay(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms))
+}
+
 export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [activeView, setActiveView] = useState<WorkspaceViewId>('story')
@@ -11,8 +15,15 @@ export default function App() {
   const [sessionId] = useState(() => crypto.randomUUID())
 
   const [charactersDoc, setCharactersDoc] = useState<CharactersDocument | null>(null)
+  const charactersDocRef = useRef<CharactersDocument | null>(null)
+  useEffect(() => {
+    charactersDocRef.current = charactersDoc
+  }, [charactersDoc])
+
   const [charactersGenError, setCharactersGenError] = useState<string | null>(null)
   const [charactersGenerating, setCharactersGenerating] = useState(false)
+  const [charactersApproving, setCharactersApproving] = useState(false)
+  const [wholeVideoPending, setWholeVideoPending] = useState(false)
   const agentChatRef = useRef<AgentChatHandle>(null)
 
   useEffect(() => {
@@ -21,10 +32,18 @@ export default function App() {
 
   const fragmentedScriptUnlocked = Boolean(charactersDoc?.meta.approved && charactersDoc?.meta.locked)
 
+  const onlyStoryUnlocked = !charactersDoc && story.trim().length === 0
+
+  const canApproveCharacters = Boolean(
+    charactersDoc &&
+      charactersDoc.characters.length > 0 &&
+      !charactersDoc.meta.locked
+  )
+
   const runGenerateCharacters = useCallback(async () => {
     setCharactersGenError(null)
-    agentChatRef.current?.appendLine('user', 'Generate Characters and Fragments')
-    agentChatRef.current?.appendLine('model', 'Starting character generation…')
+    agentChatRef.current?.appendLine('user', 'Generate Characters')
+    agentChatRef.current?.appendLine('model', 'Creating your characters from your story…')
     setCharactersGenerating(true)
     const res = await window.api.charactersGenerate(sessionId, story)
     setCharactersGenerating(false)
@@ -32,7 +51,7 @@ export default function App() {
       setCharactersDoc(res.data)
       agentChatRef.current?.appendLine(
         'model',
-        `Done. Character data was saved to:\n${res.savedPath}\n\nOpen the Characters tab to review and edit. After you approve there, Fragmented Script unlocks.`
+        'All set — your characters are ready.\n\nOpen the Characters tab to review or change anything. When you are happy with them, approve them there to unlock the next step (script breakdown).'
       )
     } else {
       setCharactersGenError(res.error)
@@ -41,10 +60,55 @@ export default function App() {
     setActiveView('characters')
   }, [sessionId, story])
 
+  const runApproveFromChat = useCallback(async () => {
+    const doc = charactersDocRef.current
+    if (!doc || doc.meta.locked || doc.characters.length === 0) return
+    setCharactersGenError(null)
+    agentChatRef.current?.appendLine('user', 'Approve characters and continue')
+    agentChatRef.current?.appendLine('model', 'Checking that everything looks good…')
+    await delay(350)
+    agentChatRef.current?.appendLine('model', 'Saving your choices…')
+    setCharactersApproving(true)
+    const res = await window.api.charactersApprove(sessionId, doc)
+    setCharactersApproving(false)
+    if (res.ok) {
+      setCharactersDoc(res.data)
+      agentChatRef.current?.appendLine(
+        'model',
+        'You are all set — your characters are saved and the next step is unlocked. Open the Script Breakdown tab at the top when you are ready to continue.'
+      )
+      setActiveView('fragmentedScript')
+    } else {
+      setCharactersGenError(res.error)
+      agentChatRef.current?.appendLine('error', res.error)
+    }
+  }, [sessionId])
+
+  const runGenerateWholeVideo = useCallback(async () => {
+    const t = story.trim()
+    if (!t) return
+    agentChatRef.current?.appendLine('user', 'Generate whole video at once from the story')
+    agentChatRef.current?.appendLine('model', 'Reading your story…')
+    await delay(400)
+    agentChatRef.current?.appendLine('model', 'Planning scenes and pacing…')
+    await delay(450)
+    agentChatRef.current?.appendLine('model', 'Resolving characters and continuity…')
+    setWholeVideoPending(true)
+    await delay(900)
+    setWholeVideoPending(false)
+    agentChatRef.current?.appendLine(
+      'model',
+      'Making the whole video in one go is not available in this version yet. For now, use Generate Characters, then review and approve on the Characters tab to move forward.'
+    )
+  }, [story])
+
   const onCharactersApproved = useCallback((d: CharactersDocument) => {
     setCharactersDoc(d)
     setCharactersGenError(null)
   }, [])
+
+  const chatContext =
+    activeView === 'story' ? 'story' : activeView === 'characters' ? 'characters' : 'other'
 
   return (
     <div className="workbench" role="application" aria-label="Vid-Agent">
@@ -87,16 +151,22 @@ export default function App() {
             onRetryCharactersGenerate={() => void runGenerateCharacters()}
             onCharactersApproved={onCharactersApproved}
             fragmentedScriptUnlocked={fragmentedScriptUnlocked}
+            onlyStoryUnlocked={onlyStoryUnlocked}
           />
         </div>
 
         <div className="workbench__chat-pane">
           <AgentChat
             ref={agentChatRef}
-            showStorySuggestions={activeView === 'story'}
+            chatContext={chatContext}
             storyReady={story.trim().length > 0}
             charactersGenerating={charactersGenerating}
+            charactersApproving={charactersApproving}
+            wholeVideoPending={wholeVideoPending}
+            canApproveCharacters={canApproveCharacters}
             onGenerateCharacters={() => void runGenerateCharacters()}
+            onGenerateWholeVideo={() => void runGenerateWholeVideo()}
+            onApproveCharactersFromChat={() => void runApproveFromChat()}
           />
         </div>
       </div>

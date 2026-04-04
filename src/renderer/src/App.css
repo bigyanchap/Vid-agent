@@ -259,6 +259,48 @@ body,
   font-style: italic;
 }
 
+.chat-bubble__spinner-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 0 4px;
+}
+
+.chat-bubble__caption {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-style: italic;
+  line-height: 1.35;
+}
+
+.chat-bubble--pipeline .chat-bubble__label {
+  margin-bottom: 2px;
+}
+
+.ouroboros-spinner {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+}
+
+.ouroboros-spinner__svg {
+  display: block;
+  width: 30px;
+  height: 30px;
+  color: var(--text-muted);
+  animation: ouroboros-spin 1.05s linear infinite;
+}
+
+.ouroboros-spinner__arc {
+  filter: drop-shadow(0 0 1px rgba(37, 150, 190, 0.35));
+}
+
+@keyframes ouroboros-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Composer blends with chat body (same cream as messages — no hard strip line) */
 .agent-chat__composer {
   flex: 0 0 auto;
@@ -274,6 +316,19 @@ body,
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 6px;
+}
+
+.agent-chat__suggestions--stack {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.agent-chat__suggestions--stack .agent-chat__suggestion {
+  border-radius: 10px;
+  text-align: left;
+  white-space: normal;
+  padding: 8px 12px;
+  line-height: 1.35;
 }
 
 .agent-chat__suggestion {
@@ -510,7 +565,7 @@ body,
   border: 1px solid transparent;
   border-radius: var(--radius-btn);
   font: inherit;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 600;
   color: var(--action-text-on-fill);
   background: var(--action-fill);
@@ -530,13 +585,14 @@ body,
 
 .story-card__textarea {
   flex: 1 1 auto;
-  min-height: 240px;
+  min-height: 170px;
+  max-height: 300px;
   width: 100%;
-  padding: 16px 18px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-card);
+  padding: 8px 8px;
+  border: 1px solid #c9c2a8;
+  border-radius: 3px;
   font: inherit;
-  font-size: 14px;
+  font-size: 12px;
   line-height: 1.55;
   color: var(--text-primary);
   background: var(--bg-input);

@@ -7,7 +7,7 @@ export type WorkspaceViewId = 'story' | 'characters' | 'fragmentedScript' | 'cli
 const TABS: { id: WorkspaceViewId; label: string }[] = [
   { id: 'story', label: 'Story' },
   { id: 'characters', label: 'Characters' },
-  { id: 'fragmentedScript', label: 'Fragmented Script' },
+  { id: 'fragmentedScript', label: 'Script Breakdown' },
   { id: 'clips', label: 'Clips' },
   { id: 'video', label: 'Video' }
 ]
@@ -25,6 +25,8 @@ type Props = {
   onRetryCharactersGenerate: () => void
   onCharactersApproved: (doc: CharactersDocument) => void
   fragmentedScriptUnlocked: boolean
+  /** No sheet and empty story — only Story tab is enabled */
+  onlyStoryUnlocked: boolean
 }
 
 export function MainWorkspace({
@@ -39,7 +41,8 @@ export function MainWorkspace({
   onCharactersDocumentChange,
   onRetryCharactersGenerate,
   onCharactersApproved,
-  fragmentedScriptUnlocked
+  fragmentedScriptUnlocked,
+  onlyStoryUnlocked
 }: Props) {
   return (
     <section className="main-workspace" aria-label="Editor">
@@ -58,7 +61,7 @@ export function MainWorkspace({
         )}
         {active === 'fragmentedScript' && (
           <div className="workspace-placeholder">
-            <p>Fragmented Script — coming next.</p>
+            <p>Script Breakdown — coming next.</p>
           </div>
         )}
         {active === 'clips' && (
@@ -74,7 +77,11 @@ export function MainWorkspace({
       </div>
       <nav className="main-workspace__tabs" aria-label="Primary views">
         {TABS.map(({ id, label }) => {
-          const locked = id === 'fragmentedScript' && !fragmentedScriptUnlocked
+          const lockedCharacters = id === 'characters' && onlyStoryUnlocked
+          const lockedDownstream =
+            (id === 'fragmentedScript' || id === 'clips' || id === 'video') &&
+            !fragmentedScriptUnlocked
+          const locked = lockedCharacters || lockedDownstream
           return (
             <button
               key={id}

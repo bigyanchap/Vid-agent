@@ -153,7 +153,7 @@ export function CharactersView({
         )}
         <p className="characters-panel__empty">
           No character sheet yet. Add a character manually, or from the Story tab use{' '}
-          <strong>Generate Characters and Fragments</strong> in the chat suggestions.
+          <strong>Generate Characters</strong> in the chat suggestions.
         </p>
         <div className="characters-panel__manual-actions">
           <button
@@ -194,7 +194,7 @@ export function CharactersView({
           <h3 className="char-section-title">Meta</h3>
           {!locked && (
             <button type="button" className="character-card__save" onClick={() => void saveEntireDocument()}>
-              Save to disk
+              Save
             </button>
           )}
         </div>
@@ -290,7 +290,9 @@ export function CharactersView({
 
       <div className="characters-panel__approve-wrap">
         {locked ? (
-          <p className="characters-panel__approved-note">Characters approved and locked. Fragmented Script is enabled.</p>
+          <p className="characters-panel__approved-note">
+            Your characters are approved and hence locked. You can continue to the Script Breakdown tab.
+          </p>
         ) : (
           <button
             type="button"
@@ -298,7 +300,7 @@ export function CharactersView({
             disabled={!canApprove || approving}
             onClick={() => void handleApprove()}
           >
-            {approving ? 'Approving…' : 'Approve & Proceed'}
+            {approving ? 'Working…' : 'Approve and continue'}
           </button>
         )}
       </div>
