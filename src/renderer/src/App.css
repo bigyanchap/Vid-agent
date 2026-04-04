@@ -185,8 +185,8 @@ body,
 
 .agent-chat__header {
   flex: 0 0 auto;
-  padding: 10px 12px;
-  font-size: 11px;
+  padding: 8px 10px;
+  font-size: 8px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -199,23 +199,23 @@ body,
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  padding: 12px;
+  padding: 8px 10px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 7px;
 }
 
 .agent-chat__empty {
-  margin: 12px 4px;
-  font-size: 12px;
+  margin: 8px 2px;
+  font-size: 9px;
   color: var(--text-muted);
-  line-height: 1.5;
+  line-height: 1.45;
 }
 
 .chat-bubble {
   max-width: 100%;
-  padding: 8px 10px;
-  border-radius: 10px;
+  padding: 5px 8px;
+  border-radius: 8px;
   border: 1px solid var(--border-default);
   background: var(--bg-input);
 }
@@ -238,17 +238,17 @@ body,
 
 .chat-bubble__label {
   display: block;
-  font-size: 10px;
+  font-size: 7px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   color: var(--text-muted);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .chat-bubble__text {
-  font-size: 13px;
-  line-height: 1.45;
+  font-size: 9px;
+  line-height: 1.4;
   color: var(--text-primary);
   white-space: pre-wrap;
   word-break: break-word;
@@ -262,12 +262,12 @@ body,
 .chat-bubble__spinner-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 2px 0 4px;
+  gap: 6px;
+  padding: 1px 0 2px;
 }
 
 .chat-bubble__caption {
-  font-size: 11px;
+  font-size: 8px;
   color: var(--text-secondary);
   font-style: italic;
   line-height: 1.35;
@@ -278,15 +278,15 @@ body,
 }
 
 .ouroboros-spinner {
-  width: 30px;
-  height: 30px;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
 }
 
 .ouroboros-spinner__svg {
   display: block;
-  width: 30px;
-  height: 30px;
+  width: 22px;
+  height: 22px;
   color: var(--text-muted);
   animation: ouroboros-spin 1.05s linear infinite;
 }
@@ -306,8 +306,8 @@ body,
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 10px 14px 18px;
+  gap: 7px;
+  padding: 8px 10px 12px;
   background: var(--bg-chat);
 }
 
@@ -324,22 +324,23 @@ body,
 }
 
 .agent-chat__suggestions--stack .agent-chat__suggestion {
-  border-radius: 10px;
+  border-radius: 8px;
   text-align: left;
   white-space: normal;
-  padding: 8px 12px;
-  line-height: 1.35;
+  padding: 5px 8px;
+  line-height: 1.3;
+  font-size: 8px;
 }
 
 .agent-chat__suggestion {
-  padding: 3px 12px;
+  padding: 2px 9px;
   max-width: 100%;
   border: none;
   border-radius: 9999px;
   font: inherit;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 600;
-  line-height: 1.45;
+  line-height: 1.35;
   letter-spacing: 0.02em;
   text-align: center;
   color: #ffffff;
@@ -369,11 +370,11 @@ body,
 .agent-chat__composer-field {
   display: flex;
   align-items: flex-end;
-  gap: 6px;
-  min-height: 42px;
-  padding: 6px 8px 6px 14px;
+  gap: 4px;
+  min-height: 34px;
+  padding: 4px 6px 4px 10px;
   border: 1px solid rgba(201, 194, 168, 0.28);
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--chatbox-surface);
   box-shadow: var(--chatbox-shadow);
   backdrop-filter: blur(8px);
@@ -387,13 +388,13 @@ body,
 .agent-chat__input {
   flex: 1 1 auto;
   min-width: 0;
-  min-height: 20px;
+  min-height: 16px;
   border: none;
   margin: 0;
-  padding: 6px 6px 6px 0;
+  padding: 4px 4px 4px 0;
   font: inherit;
-  font-size: 10px;
-  line-height: 1.5;
+  font-size: 8px;
+  line-height: 1.45;
   color: var(--chatbox-text);
   background: transparent;
   box-shadow: none;
@@ -421,9 +422,9 @@ body,
 }
 
 .agent-chat__send {
-  flex: 0 0 30px;
-  width: 30px;
-  height: 30px;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -434,6 +435,11 @@ body,
   color: var(--action-text-on-fill);
   cursor: pointer;
   box-shadow: 0 1px 3px rgba(37, 150, 190, 0.25);
+}
+
+.agent-chat__send svg {
+  width: 14px;
+  height: 14px;
 }
 
 .agent-chat__send:disabled {
@@ -463,6 +469,16 @@ body,
   min-height: 0;
   overflow: auto;
   padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Story tab: use full editor width and let the story stack fill height */
+.main-workspace__body--story {
+  padding: 8px 10px 14px;
 }
 
 .main-workspace__tabs {
@@ -527,17 +543,23 @@ body,
 
 /* —— Story —— */
 .story-view {
-  height: 100%;
-  min-height: 280px;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .story-card {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  height: 100%;
+  flex: 1 1 auto;
   min-height: 0;
-  padding: 4px;
+  width: 100%;
+  min-width: 0;
+  padding: 4px 0;
 }
 
 .story-card__toolbar {
@@ -556,12 +578,14 @@ body,
 }
 
 .story-card__hint {
-  font-size: 12px;
-  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
 }
 
 .story-card__sample-btn {
-  padding: 8px 16px;
+  padding: 4px 8px;
   border: 1px solid transparent;
   border-radius: var(--radius-btn);
   font: inherit;
@@ -585,9 +609,10 @@ body,
 
 .story-card__textarea {
   flex: 1 1 auto;
-  min-height: 170px;
-  max-height: 300px;
+  min-height: 120px;
+  max-height: none;
   width: 100%;
+  min-width: 0;
   padding: 8px 8px;
   border: 1px solid #c9c2a8;
   border-radius: 3px;
@@ -598,6 +623,9 @@ body,
   background: var(--bg-input);
   resize: vertical;
   box-shadow: inset 0 1px 2px rgba(44, 40, 32, 0.06);
+  /* Wrap long words; full-width lines when text has no manual mid-line breaks */
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
 .story-card__textarea::placeholder {
@@ -605,6 +633,50 @@ body,
 }
 
 .story-card__textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+  border-color: var(--accent);
+}
+
+.story-card__context {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.story-card__context-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+}
+
+.story-card__context-textarea {
+  box-sizing: border-box;
+  min-height: 150px;
+  max-height: 200px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #c9c2a8;
+  border-radius: 3px;
+  font: inherit;
+  font-size: 10px;
+  line-height: 1.45;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  resize: vertical;
+  box-shadow: inset 0 1px 2px rgba(44, 40, 32, 0.06);
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+.story-card__context-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.story-card__context-textarea:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 0;
   border-color: var(--accent);

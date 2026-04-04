@@ -32,13 +32,28 @@ const api = {
     | { ok: false; error: string }
   > => ipcRenderer.invoke('characters:generate', { sessionId, story }),
 
+  charactersRegenerate: (
+    sessionId: string,
+    story: string
+  ): Promise<
+    | { ok: true; data: CharactersDocumentPayload; savedPath: string }
+    | { ok: false; error: string }
+  > => ipcRenderer.invoke('characters:regenerate', { sessionId, story }),
+
   charactersApprove: (
     sessionId: string,
     document: CharactersDocumentPayload
   ): Promise<
     | { ok: true; data: CharactersDocumentPayload }
     | { ok: false; error: string }
-  > => ipcRenderer.invoke('characters:approve', { sessionId, document })
+  > => ipcRenderer.invoke('characters:approve', { sessionId, document }),
+
+  charactersUnlock: (
+    sessionId: string
+  ): Promise<
+    | { ok: true; data: CharactersDocumentPayload }
+    | { ok: false; error: string }
+  > => ipcRenderer.invoke('characters:unlock', sessionId)
 }
 
 if (process.contextIsolated) {

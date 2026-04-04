@@ -1,5 +1,5 @@
 import { app } from 'electron'
-import { mkdir, readFile, writeFile } from 'fs/promises'
+import { mkdir, readFile, unlink, writeFile } from 'fs/promises'
 import { dirname, join } from 'path'
 import type { CharactersDocument } from '../shared/characters-types'
 
@@ -17,6 +17,27 @@ export function skillsDir(sessionId: string): string {
 
 export function charactersPath(sessionId: string): string {
   return join(skillsDir(sessionId), 'characters.json')
+}
+
+/** Script fragments output (when that pipeline exists); removed on character unlock. */
+export function scriptFragmentsPath(sessionId: string): string {
+  return join(skillsDir(sessionId), 'script_fragments.json')
+}
+
+export async function removeScriptFragmentsIfAny(sessionId: string): Promise<void> {
+  try {
+    await unlink(scriptFragmentsPath(sessionId))
+  } catch {
+    // no file yet
+  }
+}
+
+export async function removeCharactersFileIfAny(sessionId: string): Promise<void> {
+  try {
+    await unlink(charactersPath(sessionId))
+  } catch {
+    // no file yet
+  }
 }
 
 export function projectJsonPath(sessionId: string): string {

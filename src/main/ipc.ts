@@ -1,7 +1,12 @@
 import { ipcMain } from 'electron'
 import { getGeminiApiKey, setGeminiApiKey } from './config-store'
 import { callGemini, type GeminiTurn } from './gemini'
-import { approveCharacters, generateAndSaveCharacters } from './characters-generate'
+import {
+  approveCharacters,
+  generateAndSaveCharacters,
+  regenerateCharactersFromStory,
+  unlockCharactersForEdit
+} from './characters-generate'
 import { readCharactersFile, writeCharactersFile } from './characters-files'
 import type { CharactersDocument } from '../shared/characters-types'
 
@@ -40,20 +45,55 @@ export function registerIpc(): void {
     }
   )
 
-  ipcMain.handle('characters:generate', (_evt, payload: { sessionId: string; story: string }) => {
+  ipcMain.handle('characters:generate', async (_evt, payload: { sessionId: string; story: string }) => {
     if (!payload?.sessionId) {
-      return Promise.resolve({ ok: false as const, error: 'Missing sessionId' })
+      return { ok: false as const, error: 'Missing sessionId' }
     }
-    return generateAndSaveCharacters(payload.sessionId, payload.story ?? '')
+    try {
+      return await generateAndSaveCharacters(payload.sessionId, payload.story ?? '')
+    } catch (e) {
+      return {
+        ok: false as const,
+        error: e instanceof Error ? e.message : String(e)
+      }
+    }
+  })
+
+  ipcMain.handle('characters:regenerate', async (_evt, payload: { sessionId: string; story: string }) => {
+    if (!payload?.sessionId) {
+      return { ok: false as const, error: 'Missing sessionId' }
+    }
+    try {
+      return await regenerateCharactersFromStory(payload.sessionId, payload.story ?? '')
+    } catch (e) {
+      return {
+        ok: false as const,
+        error: e instanceof Error ? e.message : String(e)
+      }
+    }
   })
 
   ipcMain.handle(
     'characters:approve',
-    (_evt, payload: { sessionId: string; document: CharactersDocument }) => {
+    async (_evt, payload: { sessionId: string; document: CharactersDocument }) => {
       if (!payload?.sessionId || !payload.document) {
-        return Promise.resolve({ ok: false as const, error: 'Missing sessionId or document' })
+        return { ok: false as const, error: 'Missing sessionId or document' }
       }
-      return approveCharacters(payload.sessionId, payload.document)
+      try {
+        return await approveCharacters(payload.sessionId, payload.document)
+      } catch (e) {
+        return {
+          ok: false as const,
+          error: e instanceof Error ? e.message : String(e)
+        }
+      }
     }
   )
+
+  ipcMain.handle('characters:unlock', (_evt, sessionId: string) => {
+    if (typeof sessionId !== 'string' || !sessionId) {
+      return Promise.resolve({ ok: false as const, error: 'Missing sessionId' })
+    }
+    return unlockCharactersForEdit(sessionId)
+  })
 }

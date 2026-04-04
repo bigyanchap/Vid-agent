@@ -17,6 +17,8 @@ type Props = {
   onActiveChange: (id: WorkspaceViewId) => void
   story: string
   onStoryChange: (value: string) => void
+  themeStyleSetup: string
+  onThemeStyleSetupChange: (value: string) => void
   sessionId: string
   charactersDocument: CharactersDocument | null
   charactersGenerating: boolean
@@ -24,8 +26,9 @@ type Props = {
   onCharactersDocumentChange: (doc: CharactersDocument) => void
   onRetryCharactersGenerate: () => void
   onCharactersApproved: (doc: CharactersDocument) => void
+  onCharactersUnlockRegenerate: () => void
   fragmentedScriptUnlocked: boolean
-  /** No sheet and empty story — only Story tab is enabled */
+  /** Lock Characters until Generate Characters / whole-video suggestion is used, or a sheet exists */
   onlyStoryUnlocked: boolean
 }
 
@@ -34,6 +37,8 @@ export function MainWorkspace({
   onActiveChange,
   story,
   onStoryChange,
+  themeStyleSetup,
+  onThemeStyleSetupChange,
   sessionId,
   charactersDocument,
   charactersGenerating,
@@ -41,22 +46,34 @@ export function MainWorkspace({
   onCharactersDocumentChange,
   onRetryCharactersGenerate,
   onCharactersApproved,
+  onCharactersUnlockRegenerate,
   fragmentedScriptUnlocked,
   onlyStoryUnlocked
 }: Props) {
   return (
     <section className="main-workspace" aria-label="Editor">
-      <div className="main-workspace__body">
-        {active === 'story' && <StoryView story={story} onStoryChange={onStoryChange} />}
+      <div
+        className={`main-workspace__body${active === 'story' ? ' main-workspace__body--story' : ''}`}
+      >
+        {active === 'story' && (
+          <StoryView
+            story={story}
+            onStoryChange={onStoryChange}
+            themeStyleSetup={themeStyleSetup}
+            onThemeStyleSetupChange={onThemeStyleSetupChange}
+          />
+        )}
         {active === 'characters' && (
           <CharactersView
             sessionId={sessionId}
+            story={story}
             document={charactersDocument}
             isGenerating={charactersGenerating}
             generateError={charactersGenerateError}
             onRetryGenerate={onRetryCharactersGenerate}
             onDocumentChange={onCharactersDocumentChange}
             onApproved={onCharactersApproved}
+            onUnlockRegenerate={onCharactersUnlockRegenerate}
           />
         )}
         {active === 'fragmentedScript' && (

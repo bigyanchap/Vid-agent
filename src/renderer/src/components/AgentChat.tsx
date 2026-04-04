@@ -197,7 +197,7 @@ export const AgentChat = forwardRef<AgentChatHandle, AgentChatProps>(function Ag
           </div>
         ))}
         {loading && <PipelineSpinner caption="Thinking…" />}
-        {charactersGenerating && !loading && <PipelineSpinner caption="Calling Gemini…" />}
+        {charactersGenerating && !loading && <PipelineSpinner caption="AI Brain is working…" />}
         {charactersApproving && !loading && !charactersGenerating && (
           <PipelineSpinner caption="Saving approval…" />
         )}
@@ -272,7 +272,7 @@ export const AgentChat = forwardRef<AgentChatHandle, AgentChatProps>(function Ag
             aria-label="Send message"
             onClick={() => void handleSend()}
           >
-            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
               <path fill="currentColor" d="M12 5.5L6 12h4v7h4v-7h4l-6-6.5z" />
             </svg>
           </button>

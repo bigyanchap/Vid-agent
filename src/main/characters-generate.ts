@@ -6,7 +6,13 @@ import {
 } from '../shared/characters-types'
 import { getGeminiApiKey } from './config-store'
 import { callGeminiSystemUser } from './gemini'
-import { charactersPath, writeCharactersFile } from './characters-files'
+import {
+  charactersPath,
+  readCharactersFile,
+  removeCharactersFileIfAny,
+  removeScriptFragmentsIfAny,
+  writeCharactersFile
+} from './characters-files'
 
 function padNeverChanges(arr: string[] | undefined): string[] {
   const a = Array.isArray(arr) ? arr.filter((s) => typeof s === 'string') : []
@@ -102,6 +108,8 @@ export async function generateAndSaveCharacters(
     return { ok: false, error: 'Story is empty. Write a story first.' }
   }
 
+  await removeScriptFragmentsIfAny(sessionId)
+
   const apiKey = getGeminiApiKey()
   try {
     const res = await callGeminiSystemUser(apiKey, CHARACTERS_GENERATION_PROMPT, trimmed)
@@ -145,5 +153,36 @@ export async function approveCharacters(
     }
   }
   await writeCharactersFile(sessionId, next)
+  return { ok: true, data: next }
+}
+
+/** Delete saved character JSON, then generate a fresh sheet from the story (fragments cleared inside generate). */
+export async function regenerateCharactersFromStory(
+  sessionId: string,
+  story: string
+): Promise<
+  { ok: true; data: CharactersDocument; savedPath: string } | { ok: false; error: string }
+> {
+  await removeCharactersFileIfAny(sessionId)
+  return generateAndSaveCharacters(sessionId, story)
+}
+
+export async function unlockCharactersForEdit(
+  sessionId: string
+): Promise<{ ok: true; data: CharactersDocument } | { ok: false; error: string }> {
+  const doc = await readCharactersFile(sessionId)
+  if (!doc) {
+    return { ok: false, error: 'No character sheet found.' }
+  }
+  const next: CharactersDocument = {
+    ...doc,
+    meta: {
+      ...doc.meta,
+      approved: false,
+      locked: false
+    }
+  }
+  await writeCharactersFile(sessionId, next)
+  await removeScriptFragmentsIfAny(sessionId)
   return { ok: true, data: next }
 }

@@ -8,10 +8,18 @@ function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms))
 }
 
+/** Prepends theme/style/setup to the story for Gemini when the user filled that box. */
+function storyForGeneration(story: string, themeStyleSetup: string): string {
+  const meta = themeStyleSetup.trim()
+  if (!meta) return story
+  return `Theme, style & setup:\n${meta}\n\n---\n\n${story}`
+}
+
 export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [activeView, setActiveView] = useState<WorkspaceViewId>('story')
   const [story, setStory] = useState('')
+  const [themeStyleSetup, setThemeStyleSetup] = useState('')
   const [sessionId] = useState(() => crypto.randomUUID())
 
   const [charactersDoc, setCharactersDoc] = useState<CharactersDocument | null>(null)
@@ -24,6 +32,8 @@ export default function App() {
   const [charactersGenerating, setCharactersGenerating] = useState(false)
   const [charactersApproving, setCharactersApproving] = useState(false)
   const [wholeVideoPending, setWholeVideoPending] = useState(false)
+  /** Characters tab unlocks after Generate Characters or whole-video suggestion is used, or when a sheet exists on disk. */
+  const [storyPipelineActionTaken, setStoryPipelineActionTaken] = useState(false)
   const agentChatRef = useRef<AgentChatHandle>(null)
 
   useEffect(() => {
@@ -32,7 +42,7 @@ export default function App() {
 
   const fragmentedScriptUnlocked = Boolean(charactersDoc?.meta.approved && charactersDoc?.meta.locked)
 
-  const onlyStoryUnlocked = !charactersDoc && story.trim().length === 0
+  const onlyStoryUnlocked = !charactersDoc && !storyPipelineActionTaken
 
   const canApproveCharacters = Boolean(
     charactersDoc &&
@@ -41,24 +51,68 @@ export default function App() {
   )
 
   const runGenerateCharacters = useCallback(async () => {
+    setStoryPipelineActionTaken(true)
     setCharactersGenError(null)
     agentChatRef.current?.appendLine('user', 'Generate Characters')
     agentChatRef.current?.appendLine('model', 'Creating your characters from your story…')
     setCharactersGenerating(true)
-    const res = await window.api.charactersGenerate(sessionId, story)
-    setCharactersGenerating(false)
-    if (res.ok) {
-      setCharactersDoc(res.data)
-      agentChatRef.current?.appendLine(
-        'model',
-        'All set — your characters are ready.\n\nOpen the Characters tab to review or change anything. When you are happy with them, approve them there to unlock the next step (script breakdown).'
-      )
-    } else {
-      setCharactersGenError(res.error)
-      agentChatRef.current?.appendLine('error', res.error)
+    try {
+      const res = await window.api.charactersGenerate(sessionId, storyForGeneration(story, themeStyleSetup))
+      if (res.ok) {
+        setCharactersDoc(res.data)
+        agentChatRef.current?.appendLine(
+          'model',
+          'All set — your characters are ready.\n\nOpen the Characters tab to review or change anything. When you are happy with them, approve them there to unlock the next step (script breakdown).'
+        )
+      } else {
+        setCharactersGenError(res.error)
+        agentChatRef.current?.appendLine('error', res.error)
+      }
+      setActiveView('characters')
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      setCharactersGenError(msg)
+      agentChatRef.current?.appendLine('error', msg)
+      setActiveView('characters')
+    } finally {
+      setCharactersGenerating(false)
     }
-    setActiveView('characters')
-  }, [sessionId, story])
+  }, [sessionId, story, themeStyleSetup])
+
+  const runUnlockRegenerate = useCallback(async () => {
+    const t = story.trim()
+    if (!t) return
+    setCharactersGenError(null)
+    agentChatRef.current?.appendLine('user', 'Unlock & Regenerate')
+    agentChatRef.current?.appendLine(
+      'model',
+      'Clearing old saved data and building new characters from your story…'
+    )
+    setCharactersGenerating(true)
+    try {
+      const res = await window.api.charactersRegenerate(sessionId, storyForGeneration(story, themeStyleSetup))
+      if (res.ok) {
+        setCharactersDoc(res.data)
+        agentChatRef.current?.appendLine(
+          'model',
+          'Done — your new characters are ready.'
+        )
+      } else {
+        setCharactersGenError(res.error)
+        agentChatRef.current?.appendLine('error', res.error)
+        setCharactersDoc(null)
+      }
+      setActiveView('characters')
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      setCharactersGenError(msg)
+      agentChatRef.current?.appendLine('error', msg)
+      setCharactersDoc(null)
+      setActiveView('characters')
+    } finally {
+      setCharactersGenerating(false)
+    }
+  }, [sessionId, story, themeStyleSetup])
 
   const runApproveFromChat = useCallback(async () => {
     const doc = charactersDocRef.current
@@ -69,24 +123,32 @@ export default function App() {
     await delay(350)
     agentChatRef.current?.appendLine('model', 'Saving your choices…')
     setCharactersApproving(true)
-    const res = await window.api.charactersApprove(sessionId, doc)
-    setCharactersApproving(false)
-    if (res.ok) {
-      setCharactersDoc(res.data)
-      agentChatRef.current?.appendLine(
-        'model',
-        'You are all set — your characters are saved and the next step is unlocked. Open the Script Breakdown tab at the top when you are ready to continue.'
-      )
-      setActiveView('fragmentedScript')
-    } else {
-      setCharactersGenError(res.error)
-      agentChatRef.current?.appendLine('error', res.error)
+    try {
+      const res = await window.api.charactersApprove(sessionId, doc)
+      if (res.ok) {
+        setCharactersDoc(res.data)
+        agentChatRef.current?.appendLine(
+          'model',
+          'You are all set — your characters are saved and the next step is unlocked. You can work on the Script Breakdown tab now. If you are happy with the Script Breakdown, you can approve it also and move forward.'
+        )
+        setActiveView('fragmentedScript')
+      } else {
+        setCharactersGenError(res.error)
+        agentChatRef.current?.appendLine('error', res.error)
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      setCharactersGenError(msg)
+      agentChatRef.current?.appendLine('error', msg)
+    } finally {
+      setCharactersApproving(false)
     }
   }, [sessionId])
 
   const runGenerateWholeVideo = useCallback(async () => {
     const t = story.trim()
     if (!t) return
+    setStoryPipelineActionTaken(true)
     agentChatRef.current?.appendLine('user', 'Generate whole video at once from the story')
     agentChatRef.current?.appendLine('model', 'Reading your story…')
     await delay(400)
@@ -143,6 +205,8 @@ export default function App() {
             onActiveChange={setActiveView}
             story={story}
             onStoryChange={setStory}
+            themeStyleSetup={themeStyleSetup}
+            onThemeStyleSetupChange={setThemeStyleSetup}
             sessionId={sessionId}
             charactersDocument={charactersDoc}
             charactersGenerating={charactersGenerating}
@@ -150,6 +214,7 @@ export default function App() {
             onCharactersDocumentChange={setCharactersDoc}
             onRetryCharactersGenerate={() => void runGenerateCharacters()}
             onCharactersApproved={onCharactersApproved}
+            onCharactersUnlockRegenerate={() => void runUnlockRegenerate()}
             fragmentedScriptUnlocked={fragmentedScriptUnlocked}
             onlyStoryUnlocked={onlyStoryUnlocked}
           />

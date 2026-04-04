@@ -9,12 +9,14 @@ import './CharactersView.css'
 
 type Props = {
   sessionId: string
+  story: string
   document: CharactersDocument | null
   isGenerating: boolean
   generateError: string | null
   onRetryGenerate: () => void
   onDocumentChange: (doc: CharactersDocument) => void
   onApproved: (doc: CharactersDocument) => void
+  onUnlockRegenerate: () => void
 }
 
 function updateCharacter(
@@ -51,12 +53,14 @@ function remapDirtyAfterRemove(dirty: Set<number>, removedIndex: number): Set<nu
 
 export function CharactersView({
   sessionId,
+  story,
   document,
   isGenerating,
   generateError,
   onRetryGenerate,
   onDocumentChange,
-  onApproved
+  onApproved,
+  onUnlockRegenerate
 }: Props) {
   const [dirtyIndices, setDirtyIndices] = useState<Set<number>>(new Set())
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -113,6 +117,16 @@ export function CharactersView({
       setSaveError(res.error)
     }
   }, [sessionId, onApproved])
+
+  const handleUnlockRegenerate = useCallback(() => {
+    if (!story.trim()) return
+    const ok = window.confirm(
+      'This will delete your saved character file and any script breakdown data, then rebuild characters from your current story. You will need to approve again. Continue?'
+    )
+    if (!ok) return
+    setSaveError(null)
+    onUnlockRegenerate()
+  }, [story, onUnlockRegenerate])
 
   if (isGenerating && !document) {
     return (
@@ -290,9 +304,37 @@ export function CharactersView({
 
       <div className="characters-panel__approve-wrap">
         {locked ? (
-          <p className="characters-panel__approved-note">
-            Your characters are approved and hence locked. You can continue to the Script Breakdown tab.
-          </p>
+          <div className="characters-panel__locked-card">
+            <p className="characters-panel__locked-headline">
+              <span className="characters-panel__locked-check" aria-hidden="true">
+                ✓
+              </span>{' '}
+              Characters approved and locked for consistency
+            </p>
+            <p className="characters-panel__locked-question">Need to make changes?</p>
+            <button
+              type="button"
+              className="characters-panel__unlock-btn"
+              disabled={isGenerating || !story.trim()}
+              title={
+                !story.trim()
+                  ? 'Write or paste your story on the Story tab first.'
+                  : undefined
+              }
+              onClick={() => handleUnlockRegenerate()}
+            >
+              {isGenerating ? 'Working…' : 'Unlock & Regenerate'}
+            </button>
+            <div className="characters-panel__unlock-warning" role="note">
+              <span className="characters-panel__unlock-warning-icon" aria-hidden="true">
+                ⚠
+              </span>
+              <p>
+                This removes saved character data and script breakdown files, then creates a fresh character
+                pass from your story. You will need to approve again before continuing.
+              </p>
+            </div>
+          </div>
         ) : (
           <button
             type="button"

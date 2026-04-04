@@ -22,9 +22,19 @@ declare global {
         | { ok: true; data: CharactersDocument; savedPath: string }
         | { ok: false; error: string }
       >
+      charactersRegenerate: (
+        sessionId: string,
+        story: string
+      ) => Promise<
+        | { ok: true; data: CharactersDocument; savedPath: string }
+        | { ok: false; error: string }
+      >
       charactersApprove: (
         sessionId: string,
         document: CharactersDocument
+      ) => Promise<{ ok: true; data: CharactersDocument } | { ok: false; error: string }>
+      charactersUnlock: (
+        sessionId: string
       ) => Promise<{ ok: true; data: CharactersDocument } | { ok: false; error: string }>
     }
   }
