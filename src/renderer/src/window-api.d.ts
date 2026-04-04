@@ -1,5 +1,7 @@
 export {}
 
+import type { CharactersDocument } from '@shared/characters-types'
+
 type ChatMessage = { role: 'user' | 'model'; text: string }
 
 declare global {
@@ -8,6 +10,22 @@ declare global {
       getGeminiApiKey: () => Promise<string>
       setGeminiApiKey: (key: string) => Promise<void>
       geminiChat: (messages: ChatMessage[]) => Promise<{ text?: string; error?: string }>
+      charactersLoad: (sessionId: string) => Promise<CharactersDocument | null>
+      charactersSave: (
+        sessionId: string,
+        document: CharactersDocument
+      ) => Promise<{ ok: true } | { ok: false; error: string }>
+      charactersGenerate: (
+        sessionId: string,
+        story: string
+      ) => Promise<
+        | { ok: true; data: CharactersDocument; savedPath: string }
+        | { ok: false; error: string }
+      >
+      charactersApprove: (
+        sessionId: string,
+        document: CharactersDocument
+      ) => Promise<{ ok: true; data: CharactersDocument } | { ok: false; error: string }>
     }
   }
 }

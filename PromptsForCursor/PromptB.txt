@@ -1,0 +1,222 @@
+CONTEXT:
+This is a Next.js + Electron desktop app. Characters have already 
+been generated and approved. The user now presses 
+"Generate Fragmented Script" to parse the story into cinematic 
+frames. Each frame will later become one 6-second video clip.
+
+GEMINI SYSTEM PROMPT (use this exact string as the system prompt):
+----------------------------------------
+export const FRAGMENTS_GENERATION_PROMPT = `
+Parse the story into cinematic frames using these rules:
+
+READING THE STORY:
+- Read the full story and the approved characters JSON together
+- Each frame represents exactly 6 seconds of screen time
+- Calculate the number of frames by estimating the story's total 
+  video length then dividing by 6:
+    1 minute story  = ~10 frames
+    2 minute story  = ~20 frames
+    3 minute story  = ~30 frames
+- Never create fewer than 5 frames regardless of story length
+- Each frame must be a single continuous scene — do not split 
+  one scene across two frames
+- Every meaningful story beat must appear in at least one frame
+- Do not skip any part of the story
+
+PER FRAME RULES:
+- story_chunk: the exact narrative moment of this frame, 
+  2-3 sentences maximum, written in present tense
+- scene_description: a detailed visual description of what the 
+  camera sees — location, environment, time of day, mood, 
+  background details. Specific enough for a video director.
+- characters_present: array of character ids from the approved 
+  characters JSON — only include characters actually visible 
+  in this frame. Use exact ids from characters.json, no new ids.
+- camera_hint: one of these exact values only —
+  "wide shot" | "medium shot" | "close-up" | "overhead" | 
+  "low angle" | "tracking shot"
+- duration_seconds: always exactly 6, no exceptions
+- transition: one of these exact values only —
+  "cut" | "fade" | "dissolve"
+  Use "fade" only for the very first and very last frame.
+  Use "dissolve" for time passing or location change.
+  Use "cut" for everything else.
+- status must always be "pending"
+- video_path must always be null
+
+CONSISTENCY RULES:
+- characters_present ids must exactly match ids in characters.json
+  Do not invent new character ids
+- scene_description must be consistent with the story's visual style
+  inferred from characters.json meta.story_style
+- Do not repeat the same camera_hint more than 3 times in a row
+- Vary camera_hint to create natural cinematic rhythm
+
+OUTPUT RULES:
+- Return ONLY a raw JSON object matching the schema below
+- No markdown, no code fences, no explanation, no preamble
+- Every string field must be filled — nothing left empty
+- frame_id starts at 1 and increments by 1, no gaps
+- duration_seconds is always 6
+- status is always "pending"
+- video_path is always null
+- meta.total_frames must equal the actual number of frames generated
+- meta.estimated_duration_seconds must equal total_frames × 6
+
+JSON SCHEMA TO FOLLOW:
+{
+  "meta": {
+    "schema_version": "1.0",
+    "generated_at": "",
+    "total_frames": 0,
+    "estimated_duration_seconds": 0,
+    "story_style": "",
+    "approved": false,
+    "locked": false
+  },
+  "frames": [
+    {
+      "frame_id": 1,
+      "story_chunk": "",
+      "scene_description": "",
+      "characters_present": [],
+      "camera_hint": "",
+      "duration_seconds": 6,
+      "transition": "",
+      "status": "pending",
+      "video_path": null
+    }
+  ]
+}
+`
+----------------------------------------
+
+IMPLEMENTATION:
+- Place the prompt constant in lib/prompts/fragments.ts
+- This section is only enabled after characters.json has 
+  approved: true and locked: true
+- Before calling Gemini, load characters.json from:
+  userData/projects/{session_id}/skills/characters.json
+- Send both to Gemini:
+    system prompt = FRAGMENTS_GENERATION_PROMPT
+    user message  = "Story:\n{storyText}\n\nApproved Characters:\n{characters JSON}"
+- Wrap the entire Gemini call in try/catch
+- Before JSON.parse(), strip any accidental markdown fences:
+    response.replace(/```json|```/g, '').trim()
+- On parse failure: show inline error inside the fragments panel
+  with a "Retry" button. Do not crash the app.
+- On success:
+    - Fill meta.total_frames = frames.length
+    - Fill meta.estimated_duration_seconds = frames.length × 6
+    - Fill meta.generated_at = new Date().toISOString()
+    - Set approved: false, locked: false
+    - Save to:
+      userData/projects/{session_id}/skills/fragments.json
+
+FILE STRUCTURE:
+userData/
+└── projects/
+    └── {session_id}/
+        ├── project.json
+        └── skills/
+            ├── characters.json         ← read before calling Gemini
+            └── fragments.json          ← save output here
+
+DRAG AND DROP:
+- Install these packages: @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities
+- Each frame box is a draggable sortable item using @dnd-kit/sortable
+- Show a drag handle (⠿) on the left edge of each frame box
+  styled as: color #00bfff, font-size 16px, cursor grab, opacity 0.6
+- When user drops a frame in a new position:
+    1. Reorder the frames array in state
+    2. Reassign frame_id sequentially (1, 2, 3... no gaps) 
+       to match new order
+    3. Auto-save immediately to fragments.json without 
+       requiring the user to press Save
+- Show a brief "Saved" flash on the frame box after auto-save
+  styled as: color #00bfff, font-size 10px, fades out in 1.5s
+
+UI REQUIREMENTS:
+- This entire section is visually disabled (opacity 0.3, 
+  pointer-events none) until characters.json is locked
+- When unlocked, show a subtle animation — borders pulse once 
+  in #00bfff to signal the section is now active
+
+FRAME BOX STYLE:
+- Box header: "FRAME 01", "FRAME 02" etc.
+  font-size 10px, color #00bfff, font-family monospace, 
+  uppercase, letter-spacing 2px
+- Box container: display flex, drag handle on left, 
+  content on right
+- Box style:
+    background: #0d1117
+    border: 1px solid #00bfff
+    box-shadow: 0 0 10px #00bfff33
+    border-radius: 8px
+    padding: 16px
+    margin-bottom: 12px
+- Labels:
+    font-size: 10px
+    color: #00bfff
+    text-transform: uppercase
+    letter-spacing: 1px
+    margin-bottom: 2px
+- Values (editable fields):
+    font-size: 12px
+    color: #e0e0e0
+    font-family: monospace
+    background: transparent
+    border: none
+    border-bottom: 1px solid #00bfff22
+    width: 100%
+- Divider lines between fields: 
+    border-top: 1px solid #00bfff22
+    margin: 8px 0
+
+FIELDS SHOWN PER FRAME BOX (in this order):
+1. story_chunk        — textarea, 3 rows
+2. scene_description  — textarea, 3 rows
+3. characters_present — multi-select checkboxes, names mapped 
+                        from ids using characters.json
+4. camera_hint        — dropdown, only these options:
+                        wide shot | medium shot | close-up | 
+                        overhead | low angle | tracking shot
+5. transition         — dropdown, only these options:
+                        cut | fade | dissolve
+6. duration_seconds   — read-only text showing "6s", 
+                        styled in #00bfff44, not editable
+
+STATUS BADGE:
+- Show on top-right corner of each frame box
+- "PENDING"     — color #666666, background #1a1a1a
+- "GENERATING"  — color #FFD700, background #2a2200,
+                  pulse animation
+- "DONE"        — color #00ff88, background #002a1a
+- Font-size 9px, monospace, uppercase, letter-spacing 1px,
+  border-radius 4px, padding 2px 6px
+
+SAVE BEHAVIOR:
+- Each frame box shows a "Save" button when any field is modified
+- Save button style: 
+    font-size 10px, color #00bfff, border 1px solid #00bfff,
+    background transparent, border-radius 4px, padding 4px 10px
+- Clicking Save updates that frame in fragments.json only —
+  do not overwrite the entire file, update only the changed frame
+
+APPROVE SECTION:
+- Below all frame boxes, show a summary bar:
+    "TOTAL FRAMES: {n}  |  ESTIMATED DURATION: {n}s  |  ~{m} min"
+  styled in #00bfff, font-size 10px, monospace
+- Below the summary bar, show a single button:
+  "Approve & Proceed to Video Generation"
+    background: transparent
+    border: 1px solid #00bfff
+    color: #00bfff
+    font-size 11px, monospace, uppercase, letter-spacing 1px
+    box-shadow: 0 0 12px #00bfff55
+    padding: 10px 24px
+    on hover: background #00bfff11
+- Clicking it:
+    1. Sets approved: true and locked: true in fragments.json
+    2. Updates project.json status to "fragments_approved"
+    3. Enables the Video Generation section

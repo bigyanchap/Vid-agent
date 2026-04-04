@@ -1,4 +1,11 @@
-import { useCallback, useLayoutEffect, useRef, useState } from 'react'
+import {
+  forwardRef,
+  useCallback,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  useState
+} from 'react'
 
 type GeminiTurn = { role: 'user' | 'model'; text: string }
 
@@ -20,11 +27,25 @@ const STORY_SUGGESTED_REPLIES = [
 ] as const
 
 type AgentChatProps = {
-  /** When true (Story tab active), show suggested reply chips above the composer. Actions wired in a later step. */
   showStorySuggestions?: boolean
+  storyReady?: boolean
+  charactersGenerating?: boolean
+  onGenerateCharacters?: () => void
 }
 
-export function AgentChat({ showStorySuggestions = false }: AgentChatProps) {
+export type AgentChatHandle = {
+  appendLine: (kind: 'user' | 'model' | 'error', text: string) => void
+}
+
+export const AgentChat = forwardRef<AgentChatHandle, AgentChatProps>(function AgentChat(
+  {
+    showStorySuggestions = false,
+    storyReady = false,
+    charactersGenerating = false,
+    onGenerateCharacters
+  },
+  ref
+) {
   const [committed, setCommitted] = useState<GeminiTurn[]>([])
   const [lines, setLines] = useState<Line[]>([])
   const [draft, setDraft] = useState('')
@@ -50,9 +71,22 @@ export function AgentChat({ showStorySuggestions = false }: AgentChatProps) {
     })
   }, [])
 
+  useImperativeHandle(
+    ref,
+    () => ({
+      appendLine(kind, text) {
+        setLines((prev) => [...prev, { id: nextId(), kind, text }])
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => scrollToBottom())
+        })
+      }
+    }),
+    [scrollToBottom]
+  )
+
   async function handleSend(): Promise<void> {
     const text = draft.trim()
-    if (!text || loading) return
+    if (!text || loading || charactersGenerating) return
 
     const userLine: Line = { id: nextId(), kind: 'user', text }
     setLines((prev) => [...prev, userLine])
@@ -86,7 +120,7 @@ export function AgentChat({ showStorySuggestions = false }: AgentChatProps) {
     <section className="agent-chat" aria-label="Agent chat">
       <header className="agent-chat__header">Agent Chat</header>
       <div className="agent-chat__messages" ref={listRef} role="log" aria-live="polite">
-        {lines.length === 0 && !loading && (
+        {lines.length === 0 && !loading && !charactersGenerating && (
           <p className="agent-chat__empty">Ask the agent about your story, characters, or clips.</p>
         )}
         {lines.map((line) => (
@@ -100,6 +134,12 @@ export function AgentChat({ showStorySuggestions = false }: AgentChatProps) {
             <div className="chat-bubble__text">{line.text}</div>
           </div>
         ))}
+        {charactersGenerating && !loading && (
+          <div className="chat-bubble chat-bubble--model">
+            <span className="chat-bubble__label">Agent</span>
+            <div className="chat-bubble__text chat-bubble__typing">Calling Gemini…</div>
+          </div>
+        )}
         {loading && (
           <div className="chat-bubble chat-bubble--model">
             <span className="chat-bubble__label">Agent</span>
@@ -112,21 +152,29 @@ export function AgentChat({ showStorySuggestions = false }: AgentChatProps) {
           <div
             className="agent-chat__suggestions"
             role="group"
-            aria-label="Suggested replies (not yet available)"
+            aria-label="Suggested pipeline actions"
           >
-            {STORY_SUGGESTED_REPLIES.map((label) => (
-              <button
-                key={label}
-                type="button"
-                className="agent-chat__suggestion"
-                title="Coming soon"
-                onClick={() => {
-                  /* Pipeline triggers — next step */
-                }}
-              >
-                {label}
-              </button>
-            ))}
+            {STORY_SUGGESTED_REPLIES.map((label) => {
+              const isCharacters = label === 'Generate Characters and Fragments'
+              const disabled =
+                isCharacters
+                  ? !storyReady || charactersGenerating
+                  : true
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  className="agent-chat__suggestion"
+                  title={isCharacters ? undefined : 'Coming soon'}
+                  disabled={disabled}
+                  onClick={() => {
+                    if (isCharacters && onGenerateCharacters) onGenerateCharacters()
+                  }}
+                >
+                  {label}
+                </button>
+              )
+            })}
           </div>
         )}
         <div className="agent-chat__composer-field">
@@ -136,7 +184,7 @@ export function AgentChat({ showStorySuggestions = false }: AgentChatProps) {
             placeholder="Message the agent..."
             rows={1}
             value={draft}
-            disabled={loading}
+            disabled={loading || charactersGenerating}
             onChange={(e) => {
               setDraft(e.target.value)
             }}
@@ -150,7 +198,7 @@ export function AgentChat({ showStorySuggestions = false }: AgentChatProps) {
           <button
             type="button"
             className="agent-chat__send"
-            disabled={loading || !draft.trim()}
+            disabled={loading || charactersGenerating || !draft.trim()}
             aria-label="Send message"
             onClick={() => void handleSend()}
           >
@@ -162,4 +210,4 @@ export function AgentChat({ showStorySuggestions = false }: AgentChatProps) {
       </div>
     </section>
   )
-}
+})

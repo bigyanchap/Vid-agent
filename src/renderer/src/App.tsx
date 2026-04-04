@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { AgentChat } from './components/AgentChat'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { CharactersDocument } from '@shared/characters-types'
+import { AgentChat, type AgentChatHandle } from './components/AgentChat'
 import { MainWorkspace, type WorkspaceViewId } from './components/MainWorkspace'
 import { SettingsModal } from './components/SettingsModal'
 
@@ -7,6 +8,43 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [activeView, setActiveView] = useState<WorkspaceViewId>('story')
   const [story, setStory] = useState('')
+  const [sessionId] = useState(() => crypto.randomUUID())
+
+  const [charactersDoc, setCharactersDoc] = useState<CharactersDocument | null>(null)
+  const [charactersGenError, setCharactersGenError] = useState<string | null>(null)
+  const [charactersGenerating, setCharactersGenerating] = useState(false)
+  const agentChatRef = useRef<AgentChatHandle>(null)
+
+  useEffect(() => {
+    void window.api.charactersLoad(sessionId).then((d) => setCharactersDoc(d))
+  }, [sessionId])
+
+  const fragmentedScriptUnlocked = Boolean(charactersDoc?.meta.approved && charactersDoc?.meta.locked)
+
+  const runGenerateCharacters = useCallback(async () => {
+    setCharactersGenError(null)
+    agentChatRef.current?.appendLine('user', 'Generate Characters and Fragments')
+    agentChatRef.current?.appendLine('model', 'Starting character generation…')
+    setCharactersGenerating(true)
+    const res = await window.api.charactersGenerate(sessionId, story)
+    setCharactersGenerating(false)
+    if (res.ok) {
+      setCharactersDoc(res.data)
+      agentChatRef.current?.appendLine(
+        'model',
+        `Done. Character data was saved to:\n${res.savedPath}\n\nOpen the Characters tab to review and edit. After you approve there, Fragmented Script unlocks.`
+      )
+    } else {
+      setCharactersGenError(res.error)
+      agentChatRef.current?.appendLine('error', res.error)
+    }
+    setActiveView('characters')
+  }, [sessionId, story])
+
+  const onCharactersApproved = useCallback((d: CharactersDocument) => {
+    setCharactersDoc(d)
+    setCharactersGenError(null)
+  }, [])
 
   return (
     <div className="workbench" role="application" aria-label="Vid-Agent">
@@ -41,11 +79,25 @@ export default function App() {
             onActiveChange={setActiveView}
             story={story}
             onStoryChange={setStory}
+            sessionId={sessionId}
+            charactersDocument={charactersDoc}
+            charactersGenerating={charactersGenerating}
+            charactersGenerateError={charactersGenError}
+            onCharactersDocumentChange={setCharactersDoc}
+            onRetryCharactersGenerate={() => void runGenerateCharacters()}
+            onCharactersApproved={onCharactersApproved}
+            fragmentedScriptUnlocked={fragmentedScriptUnlocked}
           />
         </div>
 
         <div className="workbench__chat-pane">
-          <AgentChat showStorySuggestions={activeView === 'story'} />
+          <AgentChat
+            ref={agentChatRef}
+            showStorySuggestions={activeView === 'story'}
+            storyReady={story.trim().length > 0}
+            charactersGenerating={charactersGenerating}
+            onGenerateCharacters={() => void runGenerateCharacters()}
+          />
         </div>
       </div>
 

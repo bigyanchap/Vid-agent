@@ -302,6 +302,15 @@ body,
   outline-offset: 2px;
 }
 
+.agent-chat__suggestion:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.agent-chat__suggestion:disabled:hover {
+  background: var(--suggestion-chip-bg);
+}
+
 .agent-chat__composer-field {
   display: flex;
   align-items: flex-end;
@@ -437,6 +446,19 @@ body,
 .workspace-tab:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
+}
+
+.workspace-tab:disabled,
+.workspace-tab.workspace-tab--locked:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  color: var(--text-muted);
+}
+
+.workspace-tab:disabled:hover,
+.workspace-tab.workspace-tab--locked:disabled:hover {
+  background: transparent;
+  color: var(--text-muted);
 }
 
 .workspace-placeholder {

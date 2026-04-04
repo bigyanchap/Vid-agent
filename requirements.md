@@ -25,9 +25,16 @@ This file records **runtime and tooling expectations** for Vid-Agent. Update it 
 
 | Service | Purpose | Credential |
 | ------- | ------- | ---------- |
-| **Google Gemini API** | Agent chat replies | **`GEMINI_API_KEY`** (entered in Settings, stored locally in `vid-agent-config.json` under app user data). Default model: **`gemini-2.0-flash`**. |
+| **Google Gemini API** | Agent chat + **character JSON generation** | **`GEMINI_API_KEY`** (Settings → `vid-agent-config.json`). Default model: **`gemini-3.1-pro-preview`** (`src/main/gemini-model.ts`). Character extraction uses **systemInstruction** + story as user text; prompt: `src/lib/prompts/characters.ts`. |
 
 Outbound HTTPS from the **main process** only; the renderer does not receive the key.
+
+## Project files (per session)
+
+| Path (under `userData`) | Purpose |
+| ----------------------- | ------- |
+| `projects/{session_id}/project.json` | Created on first character generation (`session_id`, `created_at`). |
+| `projects/{session_id}/skills/characters.json` | Parsed character schema + `meta` (`approved`, `locked`, etc.). |
 
 ## UI theme (Cursor warm light)
 
@@ -59,3 +66,6 @@ Development and builds are expected to work on **Windows**, **macOS**, and **Lin
 | 2026-04-03 | **Fragmented Script** tab (between Characters and Clips); **Story**-only chat **suggested replies** (three labels, non-functional until pipeline step). |
 | 2026-04-03 | Suggested-reply chips: slate `#5F6D7E`, white **9px** text, pill (**ellipsoid**), **right-aligned** row. |
 | 2026-04-03 | Chat composer: draft **`#2596be`**, **10px** text; frosted surface + soft shadow; composer area **cream** (no tan seam); send matches teal. |
+| 2026-04-03 | **Characters pipeline:** `lib/prompts/characters.ts` system prompt; Gemini generate + JSON parse (fence strip); save/load/approve IPC; dark cyan **Characters** UI; **Approve & Proceed** unlocks **Fragmented Script** tab. |
+| 2026-04-03 | Migrated off deprecated **`gemini-2.0-flash`** → **`gemini-3.1-pro-preview`** (configurable in `src/main/gemini-model.ts`). |
+| 2026-04-03 | **Characters** UI: warm palette (no dark panel); smaller type; **grid** label + value on one line. |
