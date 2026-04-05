@@ -27,7 +27,6 @@
   --status-height: 20px;
 
   --shadow-modal: 0 16px 48px rgba(0, 0, 0, 0.12);
-  --status-bar-bg: #3d2b1f;
 }
 
 *,
@@ -87,8 +86,9 @@ body,
   grid-column: 1 / -1;
   grid-row: 2;
   height: var(--status-height);
-  background: var(--status-bar-bg);
-  color: #ffffff;
+  background: var(--bg-base);
+  border-top: 1px solid var(--border);
+  color: var(--text-secondary);
   font-size: 11px;
   font-family: var(--font-ui);
   padding: 0 12px;
@@ -103,6 +103,7 @@ body,
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--text-secondary);
 }
 
 /* —— Activity bar —— */
