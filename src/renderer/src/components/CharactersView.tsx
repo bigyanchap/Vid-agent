@@ -170,8 +170,8 @@ export function CharactersView({
           </div>
         )}
         <p className="characters-panel__empty">
-          No character sheet yet. Add a character manually, or from the Story tab use{' '}
-          <strong>Generate Characters from story</strong> in the chat suggestions.
+          No character sheet yet. Add a character manually, or on the <strong>Story</strong> view use{' '}
+          <strong>Generate Characters</strong>.
         </p>
         <div className="characters-panel__manual-actions">
           <button
@@ -313,7 +313,7 @@ export function CharactersView({
               <span className="characters-panel__locked-check" aria-hidden="true">
                 ✓
               </span>{' '}
-              Characters approved and locked for consistency
+              Characters approved and locked.
             </p>
             <p className="characters-panel__locked-question">Need to make changes?</p>
             <button
@@ -324,20 +324,15 @@ export function CharactersView({
             >
               {isGenerating ? 'Working…' : 'Unlock'}
             </button>
-            <div className="characters-panel__unlock-warning" role="note">
-              <span className="characters-panel__unlock-warning-icon" aria-hidden="true">
-                ⚠
-              </span>
-              <p>
-                Unlocking lets you edit your saved character sheet again. Any saved script breakdown for this
-                project will be cleared. You will need to approve your characters again before continuing.
-              </p>
-            </div>
+            <p className="characters-panel__unlock-warning" role="note">
+              Unlocking lets you edit your saved character sheet again. Any saved script breakdown for this
+              project will be cleared. You will need to approve your characters again before continuing.
+            </p>
           </div>
         ) : (
           <button
             type="button"
-            className="characters-panel__approve"
+            className="btn-generate btn-generate--block"
             disabled={!canApprove || approving}
             onClick={() => void handleApprove()}
           >

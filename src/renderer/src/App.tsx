@@ -1,14 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CharactersDocument } from '@shared/characters-types'
+import type { FragmentsDocument } from '@shared/fragments-types'
 import {
-  buildStyleSetupBlockForGeneration,
+  buildFullStorySetupBlockForGeneration,
+  SAMPLE_CHARACTER_REPRESENTATION,
+  SAMPLE_RENDERING_TYPE,
   SAMPLE_STYLE_SETUP_VALUES,
+  type CharacterRepresentationChoice,
+  type RenderingTypeChoice,
   type StyleSetupKey,
   STYLE_SETUP_KEYS
 } from './sample-story'
+import { ActivityBar } from './components/ActivityBar'
 import { AgentChat, type AgentChatHandle } from './components/AgentChat'
-import { MainWorkspace, type WorkspaceViewId } from './components/MainWorkspace'
+import { MainWorkspace } from './components/MainWorkspace'
 import { SettingsModal } from './components/SettingsModal'
+import { workspaceStatusTag, type WorkspaceViewId } from './workspace-views'
 
 function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms))
@@ -26,9 +33,18 @@ function countWords(text: string): number {
   return t.split(/\s+/).filter(Boolean).length
 }
 
-/** Prepends Theme / Style / … block for Gemini; empty inputs use the sample-story fallback phrase. */
-function storyForGeneration(story: string, styleSetupFields: Record<StyleSetupKey, string>): string {
-  const block = buildStyleSetupBlockForGeneration(styleSetupFields)
+/** Prepends Theme / Setup / … plus rendering & character choices for Gemini; blanks use the sample-story fallback phrase. */
+function storyForGeneration(
+  story: string,
+  styleSetupFields: Record<StyleSetupKey, string>,
+  renderingType: RenderingTypeChoice,
+  characterRepresentation: CharacterRepresentationChoice
+): string {
+  const block = buildFullStorySetupBlockForGeneration(
+    styleSetupFields,
+    renderingType,
+    characterRepresentation
+  )
   return `Theme, style & setup:\n${block}\n\n---\n\n${story}`
 }
 
@@ -37,6 +53,9 @@ export default function App() {
   const [activeView, setActiveView] = useState<WorkspaceViewId>('story')
   const [story, setStory] = useState('')
   const [styleSetupFields, setStyleSetupFields] = useState(emptyStyleSetupFields)
+  const [renderingType, setRenderingType] = useState<RenderingTypeChoice>('')
+  const [characterRepresentation, setCharacterRepresentation] =
+    useState<CharacterRepresentationChoice>('')
   const [sessionId] = useState(() => crypto.randomUUID())
 
   const [charactersDoc, setCharactersDoc] = useState<CharactersDocument | null>(null)
@@ -48,8 +67,7 @@ export default function App() {
   const [charactersGenError, setCharactersGenError] = useState<string | null>(null)
   const [charactersGenerating, setCharactersGenerating] = useState(false)
   const [charactersApproving, setCharactersApproving] = useState(false)
-  const [wholeVideoPending, setWholeVideoPending] = useState(false)
-  /** Characters tab unlocks after Generate Characters or whole-video suggestion is used, or when a sheet exists on disk. */
+  /** Characters tab unlocks after Generate Characters is used, or when a sheet exists on disk. */
   const [storyPipelineActionTaken, setStoryPipelineActionTaken] = useState(false)
   /** After Insert Sample Story with a long sample, gently highlight Generate Characters in chat. */
   const [nudgeGenerateCharactersNext, setNudgeGenerateCharactersNext] = useState(false)
@@ -65,7 +83,28 @@ export default function App() {
     }
   }, [story])
 
-  const fragmentedScriptUnlocked = Boolean(charactersDoc?.meta.approved && charactersDoc?.meta.locked)
+  const charactersSheetLocked = Boolean(charactersDoc?.meta.locked)
+
+  const [persistedFragments, setPersistedFragments] = useState<FragmentsDocument | null>(null)
+  const clipsUnlocked = Boolean(persistedFragments?.meta.approved && persistedFragments?.meta.locked)
+
+  const onPersistedFragmentsChange = useCallback((doc: FragmentsDocument | null) => {
+    setPersistedFragments(doc)
+  }, [])
+
+  useEffect(() => {
+    if (!charactersSheetLocked) {
+      setPersistedFragments(null)
+      return
+    }
+    let cancelled = false
+    void window.api.fragmentsLoad(sessionId).then((doc) => {
+      if (!cancelled) setPersistedFragments(doc)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [sessionId, charactersSheetLocked])
 
   const onlyStoryUnlocked = !charactersDoc && !storyPipelineActionTaken
 
@@ -83,10 +122,17 @@ export default function App() {
     agentChatRef.current?.appendLine('model', 'Creating your characters from your story…')
     setCharactersGenerating(true)
     try {
-      const res = await window.api.charactersGenerate(
-        sessionId,
-        storyForGeneration(story, styleSetupFields)
+      const charactersUserMessage = storyForGeneration(
+        story,
+        styleSetupFields,
+        renderingType,
+        characterRepresentation
       )
+      console.log(
+        '[Vid-Agent] Generate Characters — user message sent to main (same string Gemini receives as user content). Full request including systemInstruction is logged in the terminal where you ran the app.'
+      )
+      console.log(charactersUserMessage)
+      const res = await window.api.charactersGenerate(sessionId, charactersUserMessage)
       if (res.ok) {
         setCharactersDoc(res.data)
         agentChatRef.current?.appendLine(
@@ -106,7 +152,7 @@ export default function App() {
     } finally {
       setCharactersGenerating(false)
     }
-  }, [sessionId, story, styleSetupFields])
+  }, [sessionId, story, styleSetupFields, renderingType, characterRepresentation])
 
   const runUnlockCharacters = useCallback(async () => {
     setCharactersGenError(null)
@@ -117,6 +163,7 @@ export default function App() {
       const res = await window.api.charactersUnlock(sessionId)
       if (res.ok) {
         setCharactersDoc(res.data)
+        setPersistedFragments(null)
         agentChatRef.current?.appendLine(
           'model',
           'Done — your characters are unlocked for editing. Saved script breakdown data was cleared; approve again when you are ready to continue.'
@@ -167,25 +214,6 @@ export default function App() {
     }
   }, [sessionId])
 
-  const runGenerateWholeVideo = useCallback(async () => {
-    const t = story.trim()
-    if (!t) return
-    setStoryPipelineActionTaken(true)
-    agentChatRef.current?.appendLine('user', 'Generate whole video at once from the story')
-    agentChatRef.current?.appendLine('model', 'Reading your story…')
-    await delay(400)
-    agentChatRef.current?.appendLine('model', 'Planning scenes and pacing…')
-    await delay(450)
-    agentChatRef.current?.appendLine('model', 'Resolving characters and continuity…')
-    setWholeVideoPending(true)
-    await delay(900)
-    setWholeVideoPending(false)
-    agentChatRef.current?.appendLine(
-      'model',
-      'Making the whole video in one go is not available in this version yet. For now, use Generate Characters from story, then review and approve on the Characters tab to move forward.'
-    )
-  }, [story])
-
   const onCharactersApproved = useCallback((d: CharactersDocument) => {
     setCharactersDoc(d)
     setCharactersGenError(null)
@@ -198,79 +226,83 @@ export default function App() {
     agentChatRef.current?.appendLine(kind, text)
   }, [])
 
+  const storyGenerateDisabled = !story.trim() || charactersGenerating || charactersApproving
+
+  let statusTail = 'AGENT READY'
+  if (charactersGenerating) statusTail = 'GENERATING...'
+  else if (charactersApproving) statusTail = 'APPROVING...'
+  else if (charactersDoc?.meta.locked && charactersDoc.meta.approved) statusTail = 'LOCKED ✓'
+
   return (
-    <div className="workbench" role="application" aria-label="Vid-Agent">
-      <header className="workbench__header">
-        <h1 className="workbench__title">
-          Vid-Agent <span className="workbench__subtitle">— An Agentic Video Generator</span>
-        </h1>
-      </header>
+    <div className="app-shell" role="application" aria-label="Vid-Agent">
+      <ActivityBar
+        active={activeView}
+        onActiveChange={setActiveView}
+        onlyStoryUnlocked={onlyStoryUnlocked}
+        clipsUnlocked={clipsUnlocked}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
 
-      <div className="workbench__body">
-        <aside className="activity-bar" aria-label="Activity bar">
-          <div className="activity-bar__spacer" />
-          <button
-            type="button"
-            className="activity-bar__settings"
-            title="Settings"
-            aria-label="Settings"
-            onClick={() => setSettingsOpen(true)}
-          >
-            <svg className="activity-bar__gear" viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                fill="currentColor"
-                d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"
-              />
-            </svg>
-          </button>
-        </aside>
-
-        <div className="workbench__editor-pane">
-          <MainWorkspace
-            active={activeView}
-            onActiveChange={setActiveView}
-            story={story}
-            onStoryChange={setStory}
-            styleSetupFields={styleSetupFields}
-            onStyleSetupFieldChange={(key, value) =>
-              setStyleSetupFields((prev) => ({ ...prev, [key]: value }))
+      <div className="app-shell__editor">
+        <MainWorkspace
+          active={activeView}
+          story={story}
+          onStoryChange={setStory}
+          styleSetupFields={styleSetupFields}
+          onStyleSetupFieldChange={(key, value) =>
+            setStyleSetupFields((prev) => ({ ...prev, [key]: value }))
+          }
+          onStyleSetupFieldsSample={() => {
+            setStyleSetupFields({ ...SAMPLE_STYLE_SETUP_VALUES })
+            setRenderingType(SAMPLE_RENDERING_TYPE)
+            setCharacterRepresentation(SAMPLE_CHARACTER_REPRESENTATION)
+          }}
+          renderingType={renderingType}
+          onRenderingTypeChange={setRenderingType}
+          characterRepresentation={characterRepresentation}
+          onCharacterRepresentationChange={setCharacterRepresentation}
+          onSampleStoryInserted={(insertedText) => {
+            if (countWords(insertedText) > LONG_STORY_WORD_THRESHOLD) {
+              setNudgeGenerateCharactersNext(true)
             }
-            onStyleSetupFieldsSample={() => setStyleSetupFields({ ...SAMPLE_STYLE_SETUP_VALUES })}
-            onSampleStoryInserted={(insertedText) => {
-              if (countWords(insertedText) > LONG_STORY_WORD_THRESHOLD) {
-                setNudgeGenerateCharactersNext(true)
-              }
-            }}
-            sessionId={sessionId}
-            charactersDocument={charactersDoc}
-            charactersGenerating={charactersGenerating}
-            charactersGenerateError={charactersGenError}
-            onCharactersDocumentChange={setCharactersDoc}
-            onRetryCharactersGenerate={() => void runGenerateCharacters()}
-            onCharactersApproved={onCharactersApproved}
-            onCharactersUnlock={() => void runUnlockCharacters()}
-            fragmentedScriptUnlocked={fragmentedScriptUnlocked}
-            onlyStoryUnlocked={onlyStoryUnlocked}
-            onAppendAgentLine={appendAgentLine}
-          />
-        </div>
-
-        <div className="workbench__chat-pane">
-          <AgentChat
-            ref={agentChatRef}
-            chatContext={chatContext}
-            storyReady={story.trim().length > 0}
-            charactersGenerating={charactersGenerating}
-            charactersApproving={charactersApproving}
-            wholeVideoPending={wholeVideoPending}
-            canApproveCharacters={canApproveCharacters}
-            onGenerateCharacters={() => void runGenerateCharacters()}
-            gentlePulseGenerateCharacters={nudgeGenerateCharactersNext}
-            onGenerateWholeVideo={() => void runGenerateWholeVideo()}
-            onApproveCharactersFromChat={() => void runApproveFromChat()}
-          />
-        </div>
+          }}
+          onGenerateCharacters={() => void runGenerateCharacters()}
+          storyGenerateDisabled={storyGenerateDisabled}
+          gentlePulseGenerateCharacters={nudgeGenerateCharactersNext}
+          sessionId={sessionId}
+          charactersDocument={charactersDoc}
+          charactersGenerating={charactersGenerating}
+          charactersGenerateError={charactersGenError}
+          onCharactersDocumentChange={setCharactersDoc}
+          onRetryCharactersGenerate={() => void runGenerateCharacters()}
+          onCharactersApproved={onCharactersApproved}
+          onCharactersUnlock={() => void runUnlockCharacters()}
+          charactersSheetLocked={charactersSheetLocked}
+          onPersistedFragmentsChange={onPersistedFragmentsChange}
+          onAppendAgentLine={appendAgentLine}
+        />
       </div>
+
+      <div className="app-shell__chat">
+        <AgentChat
+          ref={agentChatRef}
+          chatContext={chatContext}
+          storyReady={story.trim().length > 0}
+          charactersGenerating={charactersGenerating}
+          charactersApproving={charactersApproving}
+          canApproveCharacters={canApproveCharacters}
+          onGenerateCharacters={() => void runGenerateCharacters()}
+          gentlePulseGenerateCharacters={nudgeGenerateCharactersNext}
+          onApproveCharactersFromChat={() => void runApproveFromChat()}
+        />
+      </div>
+
+      <footer className="app-shell__status" role="contentinfo">
+        <span className="app-shell__status-left">Vid-Agent · {sessionId.slice(0, 8)}</span>
+        <span className="app-shell__status-right">
+          {workspaceStatusTag(activeView)} · {statusTail}
+        </span>
+      </footer>
 
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>

@@ -1,6 +1,7 @@
 export {}
 
 import type { CharactersDocument } from '@shared/characters-types'
+import type { FragmentsDocument, FragmentsGeneratePayload } from '@shared/fragments-types'
 
 type ChatMessage = { role: 'user' | 'model'; text: string }
 
@@ -41,6 +42,20 @@ declare global {
       charactersUnlock: (
         sessionId: string
       ) => Promise<{ ok: true; data: CharactersDocument } | { ok: false; error: string }>
+      fragmentsLoad: (sessionId: string) => Promise<FragmentsDocument | null>
+      fragmentsSave: (
+        sessionId: string,
+        document: FragmentsDocument
+      ) => Promise<{ ok: true } | { ok: false; error: string }>
+      fragmentsGenerate: (
+        payload: FragmentsGeneratePayload
+      ) => Promise<
+        | { ok: true; data: FragmentsDocument; savedPath: string }
+        | { ok: false; error: string }
+      >
+      fragmentsApprove: (
+        sessionId: string
+      ) => Promise<{ ok: true; data: FragmentsDocument } | { ok: false; error: string }>
     }
   }
 }

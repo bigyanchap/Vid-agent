@@ -1,0 +1,77 @@
+Make the following changes to the tabs. Goal: everything 
+fits in one window without scrolling. Tight, dense, small.
+
+GLOBAL DENSITY CHANGES:
+- Reduce all padding by 40% across the entire editor area
+- Reduce all margins between sections by 50%
+- Font-size for all body content: 12px (down from 13-14px)
+- Font-size for labels: 10px (down from 11px)
+- Line-height: 1.4 everywhere
+
+
+REMOVE THESE TWO SECTIONS ENTIRELY:
+- "Rendering Type" section
+- "Character Representation" section
+
+REPLACE WITH ONE SECTION: "VISUAL STYLE"
+- Section label: "VISUAL STYLE"
+  font-size: 10px, font-weight: 600, 
+  color: var(--text-secondary), uppercase, 
+  letter-spacing: 0.5px
+  margin: 10px 0 6px
+- Combine all pills into one horizontal wrapping row:
+    Photorealistic | Stylized | Non-Photorealistic |
+    Live-action | 3D character | 2D animation | 
+    Puppet | clay
+- Allow selecting ONE from each group 
+  (rendering and character type are independent selections)
+- Pill style:
+    font-size: 11px
+    padding: 3px 10px
+    border-radius: 12px
+    height: 24px
+    background: var(--bg-card)
+    border: 1px solid var(--border)
+    color: var(--text-secondary)
+    on hover: border-color #1a1a1a, color #1a1a1a
+    selected: background #f5f5f5, border-color #1a1a1a,
+              color #1a1a1a, font-weight 500
+- Helper text: "Pick one from each group or leave to model"
+    font-size: 10px, color var(--text-muted), 
+    font-style italic, margin-top: 4px
+
+WORLD SETTINGS:
+- grid-template-columns: 80px 1fr
+- row gap: 4px
+- column gap: 8px
+- Label font-size: 11px, color var(--text-secondary)
+- Input:
+    height: 26px
+    padding: 0 8px
+    font-size: 12px
+    border: 1px solid var(--border)
+    border-radius: 4px
+    background: var(--bg-card)
+    on focus: border-color #1a1a1a, outline none
+- Show ALL fields visible without scrolling:
+    Theme, Style, Setup, Mood, Era, World, Constraints
+- No field should be hidden
+
+GENERATE BUTTON:
+- height: 32px
+- font-size: 12px
+- padding: 0 16px
+- margin-top: 12px
+- background: #1a1a1a
+- color: #ffffff
+- border-radius: 6px
+- on hover: background #333333
+
+AGENT CHAT PANEL:
+- Remove "Generate whole video at once from the story" button
+- Keep only the message input and send button
+- Initial agent message font-size: 12px
+
+ACTIVITY BAR ICONS:
+- Size: 18px (down from 20px)
+- padding: 8px 0 (down from 10px)

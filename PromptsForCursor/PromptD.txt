@@ -1,0 +1,192 @@
+CONTEXT:
+Story, world settings, and approved characters are already saved.
+When user presses "Generate Script Breakdown", call Gemini API 
+to parse the story into cinematic frames using all available data.
+
+INPUT: Build this object and send as the user message to Gemini:
+{
+  "story": "{raw story text}",
+  "visual_style": "{selected rendering type}",
+  "character_representation": "{selected character type}",
+  "world_settings": {
+    "visual_style": "",
+    "theme": "",
+    "setup": "",
+    "mood": "",
+    "era": "",
+    "world": "",
+    "constraints": ""
+  },
+  "characters": {
+    // full contents of skills/characters.json
+  }
+}
+
+GEMINI SYSTEM PROMPT — place in lib/prompts/fragments.ts:
+export const FRAGMENTS_GENERATION_PROMPT = `
+Parse the story into cinematic frames using these rules:
+
+FRAME RULES:
+- Each frame represents one continuous unbroken scene
+- Estimate total video length from story then divide by 6
+  for base frame count: 1 min story = ~10 frames
+- Never fewer than 5 frames
+- Do not skip any story beat
+
+PER FRAME FIELDS:
+- story_chunk: the narrative moment, 2-3 sentences, present tense
+- scene_description: detailed visual description of what camera 
+  sees — location, time of day, mood, background. Specific enough 
+  for a video director.
+- characters_present: array of character ids — use ONLY ids that 
+  exist in the provided characters JSON. No new ids.
+- camera_hint: exactly one of:
+  "wide shot" | "medium shot" | "close-up" | 
+  "overhead" | "low angle" | "tracking shot"
+- duration_seconds: one of 4 | 6 | 8 (integer, not string)
+  Use 4 for fast action or quick transition scenes
+  Use 6 for standard narrative scenes
+  Use 8 for slow emotional or dialogue-heavy scenes
+- transition: exactly one of: "cut" | "fade" | "dissolve"
+  "fade" only for very first and very last frame
+  "dissolve" for time passing or location change
+  "cut" for everything else
+- who_says_what: array of dialogue objects for this frame
+  Each item: { "character_id": "", "line": "" }
+  character_id must exactly match an id from characters JSON
+  line is one sentence of spoken dialogue maximum
+  If no dialogue in this frame, return empty array []
+- status: always "pending"
+- video_path: always null
+
+CONSISTENCY RULES:
+- Use world_settings to inform every scene_description
+- Use visual_style and character_representation in all 
+  rendering and scene choices
+- Do not repeat same camera_hint more than 3 times in a row
+- characters_present must only contain ids from characters JSON
+- who_says_what character_id must only contain ids from 
+  characters JSON
+
+OUTPUT RULES:
+- Return ONLY raw JSON matching schema below
+- No markdown, no code fences, no explanation, no preamble
+- Every string field must be filled — nothing left empty
+- frame_id starts at 1, increments by 1, no gaps
+- meta.total_frames = actual number of frames generated
+- meta.estimated_duration_seconds = sum of all individual 
+  frame duration_seconds values (not total_frames × 6)
+- No trailing commas anywhere in the JSON
+
+OUTPUT SCHEMA:
+{
+  "meta": {
+    "schema_version": "1.0",
+    "generated_at": "",
+    "total_frames": 0,
+    "estimated_duration_seconds": 0,
+    "story_style": "",
+    "approved": false,
+    "locked": false
+  },
+  "frames": [
+    {
+      "frame_id": 1,
+      "story_chunk": "",
+      "scene_description": "",
+      "characters_present": [],
+      "camera_hint": "",
+      "duration_seconds": 6,
+      "transition": "",
+      "who_says_what": [],
+      "status": "pending",
+      "video_path": null
+    }
+  ]
+}
+`
+
+IMPLEMENTATION:
+- Place prompt in lib/prompts/fragments.ts
+- Load characters.json from:
+  userData/projects/{session_id}/skills/characters.json
+- Load world settings and story from project state
+- Build input object combining all sources
+- Call Gemini with system prompt + stringified input as user message
+- Strip markdown fences before JSON.parse():
+    response.replace(/```json|```/g, '').trim()
+- On parse failure: show inline error card with Retry button
+- On success:
+    set meta.generated_at = new Date().toISOString()
+    set meta.total_frames = frames.length
+    set meta.estimated_duration_seconds = 
+      frames.reduce((sum, f) => sum + f.duration_seconds, 0)
+    set approved: false, locked: false
+    save to:
+    userData/projects/{session_id}/skills/fragments.json
+
+UI — same card pattern as Characters tab:
+- This section disabled (opacity 0.4, pointer-events none) 
+  until characters.json has locked: true
+
+Each frame card:
+- Card style identical to character cards
+- Header: "Frame 1", "Frame 2" etc
+  font-size: 11px, font-weight: 600, color: var(--text-secondary)
+- Status badge top right: 
+  PENDING | GENERATING | DONE
+  same badge style as characters tab
+
+Fields inside each card (all editable inline):
+- story_chunk: textarea, 3 rows
+- scene_description: textarea, 3 rows
+- characters_present: multi-select checkboxes
+  show character names, store as ids from characters.json
+- camera_hint: dropdown
+  default: "wide shot"
+  options: wide shot | medium shot | close-up | 
+           overhead | low angle | tracking shot
+- duration_seconds: dropdown
+  default: 6
+  options: 4 | 6 | 8
+  display as "4s" | "6s" | "8s"
+- transition: dropdown
+  default: "cut"
+  options: cut | fade | dissolve
+- who_says_what: rendered as list of dialogue rows
+  Each row: [character name dropdown] [text input for line]
+  Character dropdown options from characters.json names,
+  stored as character_id
+  "＋ Add line" button adds a new empty row below
+  "×" on each row removes that row
+  If no rows, show placeholder: "No dialogue in this frame"
+
+Save behavior:
+- Save button appears per card when any field is modified
+- Saves only that frame back to fragments.json
+- Shows "Saved" flash for 1.5s after saving
+
+Drag to reorder:
+- Use @dnd-kit/sortable
+- Drag handle ⠿ on left edge of each card
+  color: var(--text-muted), on hover: var(--text-primary)
+- On drop: reassign all frame_ids sequentially (1, 2, 3...)
+- Auto-save entire frames array to fragments.json on reorder
+
+Summary bar below all cards:
+  "TOTAL FRAMES: {n}  ·  DURATION: {n}s  ·  ~{m} min"
+  font-size: 11px
+  color: var(--text-secondary)
+  font-family: var(--font-mono)
+  border-top: 1px solid var(--border)
+  padding-top: 12px
+  Update dynamically when any duration_seconds changes
+
+Approve button:
+  text: "Approve & Proceed to Video Generation"
+  style: same as Generate button (background #1a1a1a, 
+         color #ffffff, border-radius 6px)
+  on click:
+    set approved: true, locked: true in fragments.json
+    update project.json status to "fragments_approved"
+    enable Clips tab in activity bar

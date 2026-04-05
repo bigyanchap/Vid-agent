@@ -11,6 +11,8 @@ export type CharacterPortraitResult =
 
 /** Minimal shape for preload typing; full type lives in @shared for renderer */
 export type CharactersDocumentPayload = Record<string, unknown>
+export type FragmentsDocumentPayload = Record<string, unknown>
+export type FragmentsGeneratePayload = Record<string, unknown>
 
 const api = {
   getGeminiApiKey: (): Promise<string> => ipcRenderer.invoke('config:getGeminiApiKey'),
@@ -60,7 +62,30 @@ const api = {
   ): Promise<
     | { ok: true; data: CharactersDocumentPayload }
     | { ok: false; error: string }
-  > => ipcRenderer.invoke('characters:unlock', sessionId)
+  > => ipcRenderer.invoke('characters:unlock', sessionId),
+
+  fragmentsLoad: (sessionId: string): Promise<FragmentsDocumentPayload | null> =>
+    ipcRenderer.invoke('fragments:load', sessionId),
+
+  fragmentsSave: (
+    sessionId: string,
+    document: FragmentsDocumentPayload
+  ): Promise<{ ok: true } | { ok: false; error: string }> =>
+    ipcRenderer.invoke('fragments:save', { sessionId, document }),
+
+  fragmentsGenerate: (
+    payload: FragmentsGeneratePayload
+  ): Promise<
+    | { ok: true; data: FragmentsDocumentPayload; savedPath: string }
+    | { ok: false; error: string }
+  > => ipcRenderer.invoke('fragments:generate', payload),
+
+  fragmentsApprove: (
+    sessionId: string
+  ): Promise<
+    | { ok: true; data: FragmentsDocumentPayload }
+    | { ok: false; error: string }
+  > => ipcRenderer.invoke('fragments:approve', sessionId)
 }
 
 if (process.contextIsolated) {

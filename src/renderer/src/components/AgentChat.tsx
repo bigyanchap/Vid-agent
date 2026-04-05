@@ -1,5 +1,4 @@
 import {
-  Fragment,
   forwardRef,
   useCallback,
   useId,
@@ -8,6 +7,7 @@ import {
   useRef,
   useState
 } from 'react'
+import { Send } from 'lucide-react'
 import { btnNextHint, btnNextHintWrapClassNames } from '../styles/buttonNextHint'
 
 type GeminiTurn = { role: 'user' | 'model'; text: string }
@@ -23,10 +23,10 @@ function nextId(): string {
   return `m-${idSeq}`
 }
 
-const STORY_SUGGESTIONS = [
-  { key: 'chars', label: 'Generate Characters from story' },
-  { key: 'video', label: 'Generate whole video at once from the story' }
-] as const
+const WELCOME_MESSAGE =
+  'Vid-Agent ready. Write your story and press Generate Characters to begin.'
+
+const GENERATE_CHARACTERS_FROM_STORY = 'Generate Characters from Story'
 
 const CHARACTERS_APPROVE_SUGGESTION = 'Approve characters and continue'
 
@@ -41,12 +41,10 @@ type AgentChatProps = {
   storyReady?: boolean
   charactersGenerating?: boolean
   charactersApproving?: boolean
-  wholeVideoPending?: boolean
   canApproveCharacters?: boolean
   onGenerateCharacters?: () => void
-  /** Soft pulse + rainbow border (spectrum drifts along the edge) on “Generate Characters from story”. */
+  /** Soft pulse + spectrum border on the story suggestion after a long sample insert. */
   gentlePulseGenerateCharacters?: boolean
-  onGenerateWholeVideo?: () => void
   onApproveCharactersFromChat?: () => void
 }
 
@@ -54,15 +52,15 @@ function PipelineSpinner({ caption }: { caption: string }) {
   const gradientId = useId().replace(/:/g, '')
   return (
     <div className="chat-bubble chat-bubble--model chat-bubble--pipeline">
-      <span className="chat-bubble__label">Agent</span>
+      <span className="chat-bubble__label chat-bubble__label--agent">Agent</span>
       <div className="chat-bubble__spinner-row">
         <div className="ouroboros-spinner" aria-hidden="true">
           <svg viewBox="0 0 24 24" className="ouroboros-spinner__svg">
             <defs>
               <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#2596be" />
-                <stop offset="50%" stopColor="#3d8b6a" />
-                <stop offset="100%" stopColor="#2a5c3e" />
+                <stop offset="0%" stopColor="#9c9890" />
+                <stop offset="50%" stopColor="#c4c2bb" />
+                <stop offset="100%" stopColor="#5c5a56" />
               </linearGradient>
             </defs>
             <circle
@@ -101,24 +99,23 @@ export const AgentChat = forwardRef<AgentChatHandle, AgentChatProps>(function Ag
     storyReady = false,
     charactersGenerating = false,
     charactersApproving = false,
-    wholeVideoPending = false,
     canApproveCharacters = false,
     onGenerateCharacters,
     gentlePulseGenerateCharacters = false,
-    onGenerateWholeVideo,
     onApproveCharactersFromChat
   },
   ref
 ) {
   const [committed, setCommitted] = useState<GeminiTurn[]>([])
-  const [lines, setLines] = useState<Line[]>([])
+  const [lines, setLines] = useState<Line[]>([
+    { id: 'welcome', kind: 'model', text: WELCOME_MESSAGE }
+  ])
   const [draft, setDraft] = useState('')
   const [loading, setLoading] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
   const draftRef = useRef<HTMLTextAreaElement>(null)
 
-  const pipelineBusy =
-    charactersGenerating || charactersApproving || wholeVideoPending || loading
+  const pipelineBusy = charactersGenerating || charactersApproving || loading
 
   const syncDraftHeight = useCallback(() => {
     const el = draftRef.current
@@ -185,18 +182,14 @@ export const AgentChat = forwardRef<AgentChatHandle, AgentChatProps>(function Ag
 
   return (
     <section className="agent-chat" aria-label="Agent chat">
-      <header className="agent-chat__header">Agent Chat</header>
+      <header className="agent-chat__header">Agent chat</header>
       <div className="agent-chat__messages" ref={listRef} role="log" aria-live="polite">
-        {lines.length === 0 && !pipelineBusy && (
-          <p className="agent-chat__empty">Ask the agent about your story, characters, or clips.</p>
-        )}
         {lines.map((line) => (
-          <div
-            key={line.id}
-            className={`chat-bubble chat-bubble--${line.kind}`}
-          >
-            {line.kind === 'user' && <span className="chat-bubble__label">You</span>}
-            {line.kind === 'model' && <span className="chat-bubble__label">Agent</span>}
+          <div key={line.id} className={`chat-bubble chat-bubble--${line.kind}`}>
+            {line.kind === 'user' && <span className="chat-bubble__label chat-bubble__label--you">You</span>}
+            {line.kind === 'model' && (
+              <span className="chat-bubble__label chat-bubble__label--agent">Agent</span>
+            )}
             {line.kind === 'error' && <span className="chat-bubble__label">Error</span>}
             <div className="chat-bubble__text">{line.text}</div>
           </div>
@@ -206,44 +199,29 @@ export const AgentChat = forwardRef<AgentChatHandle, AgentChatProps>(function Ag
         {charactersApproving && !loading && !charactersGenerating && (
           <PipelineSpinner caption="Saving approval…" />
         )}
-        {wholeVideoPending && !loading && !charactersGenerating && !charactersApproving && (
-          <PipelineSpinner caption="Preparing whole-video run…" />
-        )}
       </div>
       <div className="agent-chat__composer">
         {chatContext === 'story' && (
-          <div
-            className="agent-chat__suggestions"
-            role="group"
-            aria-label="Suggested actions"
-          >
-            {STORY_SUGGESTIONS.map(({ key, label }) => {
+          <div className="agent-chat__suggestions" role="group" aria-label="Suggested actions">
+            {(() => {
               const disabled = pipelineBusy || !storyReady
-              const pulseNext =
-                key === 'chars' &&
-                gentlePulseGenerateCharacters &&
-                !disabled
+              const pulseNext = gentlePulseGenerateCharacters && !disabled
               const btn = (
                 <button
                   type="button"
                   className={`agent-chat__suggestion${pulseNext ? ` ${btnNextHint.target}` : ''}`}
                   disabled={disabled}
-                  onClick={() => {
-                    if (key === 'chars' && onGenerateCharacters) onGenerateCharacters()
-                    if (key === 'video' && onGenerateWholeVideo) onGenerateWholeVideo()
-                  }}
+                  onClick={() => onGenerateCharacters?.()}
                 >
-                  {label}
+                  {GENERATE_CHARACTERS_FROM_STORY}
                 </button>
               )
               return pulseNext ? (
-                <span key={key} className={btnNextHintWrapClassNames({ glow: true })}>
-                  {btn}
-                </span>
+                <span className={btnNextHintWrapClassNames({ glow: true })}>{btn}</span>
               ) : (
-                <Fragment key={key}>{btn}</Fragment>
+                btn
               )
-            })}
+            })()}
           </div>
         )}
         {chatContext === 'characters' && (
@@ -287,9 +265,7 @@ export const AgentChat = forwardRef<AgentChatHandle, AgentChatProps>(function Ag
             aria-label="Send message"
             onClick={() => void handleSend()}
           >
-            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-              <path fill="currentColor" d="M12 5.5L6 12h4v7h4v-7h4l-6-6.5z" />
-            </svg>
+            <Send size={14} strokeWidth={2} aria-hidden />
           </button>
         </div>
       </div>

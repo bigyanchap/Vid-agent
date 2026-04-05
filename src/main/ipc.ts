@@ -8,8 +8,15 @@ import {
   regenerateCharactersFromStory,
   unlockCharactersForEdit
 } from './characters-generate'
-import { readCharactersFile, writeCharactersFile } from './characters-files'
+import {
+  readCharactersFile,
+  readFragmentsFile,
+  writeCharactersFile,
+  writeFragmentsFile
+} from './characters-files'
+import { approveFragments, generateAndSaveFragments } from './fragments-generate'
 import type { CharactersDocument } from '../shared/characters-types'
+import type { FragmentsDocument } from '../shared/fragments-types'
 
 export function registerIpc(): void {
   ipcMain.handle('config:getGeminiApiKey', () => getGeminiApiKey())
@@ -101,5 +108,39 @@ export function registerIpc(): void {
       return Promise.resolve({ ok: false as const, error: 'Missing sessionId' })
     }
     return unlockCharactersForEdit(sessionId)
+  })
+
+  ipcMain.handle('fragments:load', (_evt, sessionId: string) => {
+    if (typeof sessionId !== 'string' || !sessionId) return null
+    return readFragmentsFile(sessionId)
+  })
+
+  ipcMain.handle(
+    'fragments:save',
+    async (_evt, payload: { sessionId: string; document: FragmentsDocument }) => {
+      if (!payload?.sessionId || !payload.document) {
+        return { ok: false as const, error: 'Invalid payload' }
+      }
+      try {
+        await writeFragmentsFile(payload.sessionId, payload.document)
+        return { ok: true as const }
+      } catch (e) {
+        return {
+          ok: false as const,
+          error: e instanceof Error ? e.message : String(e)
+        }
+      }
+    }
+  )
+
+  ipcMain.handle('fragments:generate', (_evt, payload: unknown) => {
+    return generateAndSaveFragments(payload as Parameters<typeof generateAndSaveFragments>[0])
+  })
+
+  ipcMain.handle('fragments:approve', (_evt, sessionId: string) => {
+    if (typeof sessionId !== 'string' || !sessionId) {
+      return Promise.resolve({ ok: false as const, error: 'Missing sessionId' })
+    }
+    return approveFragments(sessionId)
   })
 }

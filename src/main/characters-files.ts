@@ -2,6 +2,7 @@ import { app } from 'electron'
 import { mkdir, readFile, unlink, writeFile } from 'fs/promises'
 import { dirname, join } from 'path'
 import type { CharactersDocument } from '../shared/characters-types'
+import type { FragmentsDocument } from '../shared/fragments-types'
 
 export function projectsRoot(): string {
   return join(app.getPath('userData'), 'projects')
@@ -19,16 +20,22 @@ export function charactersPath(sessionId: string): string {
   return join(skillsDir(sessionId), 'characters.json')
 }
 
-/** Script fragments output (when that pipeline exists); removed on character unlock. */
+/** Legacy path; removed on character unlock alongside fragments.json. */
 export function scriptFragmentsPath(sessionId: string): string {
   return join(skillsDir(sessionId), 'script_fragments.json')
 }
 
+export function fragmentsPath(sessionId: string): string {
+  return join(skillsDir(sessionId), 'fragments.json')
+}
+
 export async function removeScriptFragmentsIfAny(sessionId: string): Promise<void> {
-  try {
-    await unlink(scriptFragmentsPath(sessionId))
-  } catch {
-    // no file yet
+  for (const p of [fragmentsPath(sessionId), scriptFragmentsPath(sessionId)]) {
+    try {
+      await unlink(p)
+    } catch {
+      // no file yet
+    }
   }
 }
 
@@ -81,4 +88,42 @@ export async function writeCharactersFile(
   const path = charactersPath(sessionId)
   await mkdir(dirname(path), { recursive: true })
   await writeFile(path, JSON.stringify(doc, null, 2), 'utf-8')
+}
+
+export async function readFragmentsFile(sessionId: string): Promise<FragmentsDocument | null> {
+  try {
+    const raw = await readFile(fragmentsPath(sessionId), 'utf-8')
+    return JSON.parse(raw) as FragmentsDocument
+  } catch {
+    return null
+  }
+}
+
+export async function writeFragmentsFile(sessionId: string, doc: FragmentsDocument): Promise<void> {
+  await ensureSessionProject(sessionId)
+  const path = fragmentsPath(sessionId)
+  await mkdir(dirname(path), { recursive: true })
+  await writeFile(path, JSON.stringify(doc, null, 2), 'utf-8')
+}
+
+export async function readProjectJson(sessionId: string): Promise<Record<string, unknown>> {
+  try {
+    const raw = await readFile(projectJsonPath(sessionId), 'utf-8')
+    return JSON.parse(raw) as Record<string, unknown>
+  } catch {
+    return { session_id: sessionId }
+  }
+}
+
+export async function mergeProjectJson(
+  sessionId: string,
+  patch: Record<string, unknown>
+): Promise<void> {
+  await ensureSessionProject(sessionId)
+  const cur = await readProjectJson(sessionId)
+  await writeFile(
+    projectJsonPath(sessionId),
+    JSON.stringify({ ...cur, ...patch }, null, 2),
+    'utf-8'
+  )
 }

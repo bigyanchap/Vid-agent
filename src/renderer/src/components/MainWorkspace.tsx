@@ -1,27 +1,32 @@
 import type { CharactersDocument } from '@shared/characters-types'
-import type { StyleSetupKey } from '../sample-story'
+import type { FragmentsDocument } from '@shared/fragments-types'
+import type {
+  CharacterRepresentationChoice,
+  RenderingTypeChoice,
+  StyleSetupKey
+} from '../sample-story'
+import { workspaceLabel, type WorkspaceViewId } from '../workspace-views'
 import { StoryView } from './StoryView'
 import { CharactersView } from './CharactersView'
+import { ScriptBreakdownView } from './ScriptBreakdownView'
 
-export type WorkspaceViewId = 'story' | 'characters' | 'fragmentedScript' | 'clips' | 'video'
-
-const TABS: { id: WorkspaceViewId; label: string }[] = [
-  { id: 'story', label: 'Story' },
-  { id: 'characters', label: 'Characters' },
-  { id: 'fragmentedScript', label: 'Script Breakdown' },
-  { id: 'clips', label: 'Clips' },
-  { id: 'video', label: 'Video' }
-]
+export type { WorkspaceViewId } from '../workspace-views'
 
 type Props = {
   active: WorkspaceViewId
-  onActiveChange: (id: WorkspaceViewId) => void
   story: string
   onStoryChange: (value: string) => void
   styleSetupFields: Record<StyleSetupKey, string>
   onStyleSetupFieldChange: (key: StyleSetupKey, value: string) => void
   onStyleSetupFieldsSample: () => void
+  renderingType: RenderingTypeChoice
+  onRenderingTypeChange: (value: RenderingTypeChoice) => void
+  characterRepresentation: CharacterRepresentationChoice
+  onCharacterRepresentationChange: (value: CharacterRepresentationChoice) => void
   onSampleStoryInserted?: (insertedStoryText: string) => void
+  onGenerateCharacters: () => void
+  storyGenerateDisabled: boolean
+  gentlePulseGenerateCharacters: boolean
   sessionId: string
   charactersDocument: CharactersDocument | null
   charactersGenerating: boolean
@@ -30,21 +35,26 @@ type Props = {
   onRetryCharactersGenerate: () => void
   onCharactersApproved: (doc: CharactersDocument) => void
   onCharactersUnlock: () => void
-  fragmentedScriptUnlocked: boolean
-  /** Lock Characters until Generate Characters / whole-video suggestion is used, or a sheet exists */
-  onlyStoryUnlocked: boolean
+  charactersSheetLocked: boolean
+  onPersistedFragmentsChange: (doc: FragmentsDocument | null) => void
   onAppendAgentLine: (kind: 'user' | 'model' | 'error', text: string) => void
 }
 
 export function MainWorkspace({
   active,
-  onActiveChange,
   story,
   onStoryChange,
   styleSetupFields,
   onStyleSetupFieldChange,
   onStyleSetupFieldsSample,
+  renderingType,
+  onRenderingTypeChange,
+  characterRepresentation,
+  onCharacterRepresentationChange,
   onSampleStoryInserted,
+  onGenerateCharacters,
+  storyGenerateDisabled,
+  gentlePulseGenerateCharacters,
   sessionId,
   charactersDocument,
   charactersGenerating,
@@ -53,15 +63,22 @@ export function MainWorkspace({
   onRetryCharactersGenerate,
   onCharactersApproved,
   onCharactersUnlock,
-  fragmentedScriptUnlocked,
-  onlyStoryUnlocked,
+  charactersSheetLocked,
+  onPersistedFragmentsChange,
   onAppendAgentLine
 }: Props) {
+  const pageTitle = workspaceLabel(active)
+
   return (
     <section className="main-workspace" aria-label="Editor">
-      <div
-        className={`main-workspace__body${active === 'story' ? ' main-workspace__body--story' : ''}`}
-      >
+      <div className="editor-breadcrumb">
+        <span className="editor-breadcrumb__muted">Vid-Agent</span>
+        <span className="editor-breadcrumb__sep" aria-hidden>
+          ›
+        </span>
+        <span className="editor-breadcrumb__current">{pageTitle}</span>
+      </div>
+      <div className="editor-content">
         {active === 'story' && (
           <StoryView
             story={story}
@@ -69,7 +86,14 @@ export function MainWorkspace({
             styleSetupFields={styleSetupFields}
             onStyleSetupFieldChange={onStyleSetupFieldChange}
             onStyleSetupFieldsSample={onStyleSetupFieldsSample}
+            renderingType={renderingType}
+            onRenderingTypeChange={onRenderingTypeChange}
+            characterRepresentation={characterRepresentation}
+            onCharacterRepresentationChange={onCharacterRepresentationChange}
             onSampleStoryInserted={onSampleStoryInserted}
+            onGenerateCharacters={onGenerateCharacters}
+            generateDisabled={storyGenerateDisabled}
+            gentlePulseGenerate={gentlePulseGenerateCharacters}
           />
         )}
         {active === 'characters' && (
@@ -86,41 +110,31 @@ export function MainWorkspace({
           />
         )}
         {active === 'fragmentedScript' && (
-          <div className="workspace-placeholder">
-            <p>Script Breakdown — coming next.</p>
-          </div>
+          <ScriptBreakdownView
+            sessionId={sessionId}
+            charactersSheetLocked={charactersSheetLocked}
+            story={story}
+            styleSetupFields={styleSetupFields}
+            renderingType={renderingType}
+            characterRepresentation={characterRepresentation}
+            charactersDocument={charactersDocument}
+            onPersistedFragmentsChange={onPersistedFragmentsChange}
+            onAppendAgentLine={onAppendAgentLine}
+          />
         )}
         {active === 'clips' && (
           <div className="workspace-placeholder">
+            <p className="editor-section-label">Clips</p>
             <p>Clips — coming next.</p>
           </div>
         )}
         {active === 'video' && (
           <div className="workspace-placeholder">
+            <p className="editor-section-label">Video</p>
             <p>Video — coming next.</p>
           </div>
         )}
       </div>
-      <nav className="main-workspace__tabs" aria-label="Primary views">
-        {TABS.map(({ id, label }) => {
-          const lockedCharacters = id === 'characters' && onlyStoryUnlocked
-          const lockedDownstream =
-            (id === 'fragmentedScript' || id === 'clips' || id === 'video') &&
-            !fragmentedScriptUnlocked
-          const locked = lockedCharacters || lockedDownstream
-          return (
-            <button
-              key={id}
-              type="button"
-              className={`workspace-tab${active === id ? ' is-active' : ''}${locked ? ' workspace-tab--locked' : ''}`}
-              disabled={locked}
-              onClick={() => onActiveChange(id)}
-            >
-              {label}
-            </button>
-          )
-        })}
-      </nav>
     </section>
   )
 }

@@ -112,6 +112,9 @@ export async function generateAndSaveCharacters(
 
   const apiKey = getGeminiApiKey()
   try {
+    console.log('[Vid-Agent] Generate Characters → Gemini request')
+    console.log('--- systemInstruction (characters generation) ---\n' + CHARACTERS_GENERATION_PROMPT)
+    console.log('--- user message (theme / setup + story from UI) ---\n' + trimmed)
     const res = await callGeminiSystemUser(apiKey, CHARACTERS_GENERATION_PROMPT, trimmed)
     if (res.error) {
       return { ok: false, error: res.error }
