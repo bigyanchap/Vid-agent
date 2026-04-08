@@ -1,22 +1,50 @@
-import { ipcMain } from 'electron'
+import { BrowserWindow, ipcMain } from 'electron'
+import { join } from 'path'
+import { coerceAppSettings } from '../shared/app-settings'
 import { getGeminiApiKey, setGeminiApiKey } from './config-store'
-import { callGemini, type GeminiTurn } from './gemini'
-import { generateCharacterPortrait } from './gemini-character-portrait'
+import type { GeminiTurn } from './gemini'
+import { generateCharacterPortraitRouted } from './provider-image'
+import { callTextModelConversation } from './provider-text'
 import {
   approveCharacters,
   generateAndSaveCharacters,
   regenerateCharactersFromStory,
   unlockCharactersForEdit
 } from './characters-generate'
+import { clipMediaUrlFromPath } from './clip-protocol'
 import {
   readCharactersFile,
   readFragmentsFile,
+  readProjectStatus,
+  sessionDir,
   writeCharactersFile,
   writeFragmentsFile
 } from './characters-files'
+import {
+  clipsPause,
+  clipsPipelineIsBusy,
+  clipsResume,
+  regenerateClipFrame,
+  runClipPipeline
+} from './clips-pipeline'
 import { approveFragments, generateAndSaveFragments } from './fragments-generate'
 import type { CharactersDocument } from '../shared/characters-types'
 import type { FragmentsDocument } from '../shared/fragments-types'
+import {
+  getSettingsUiSummary,
+  loadAppSettings,
+  saveAppSettings,
+  validateGenerationGate,
+  validateVideoProvider
+} from './settings-store'
+
+function broadcast(channel: string, payload: unknown): void {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) {
+      win.webContents.send(channel, payload)
+    }
+  }
+}
 
 export function registerIpc(): void {
   ipcMain.handle('config:getGeminiApiKey', () => getGeminiApiKey())
@@ -25,14 +53,38 @@ export function registerIpc(): void {
     setGeminiApiKey(typeof key === 'string' ? key : '')
   })
 
+  ipcMain.handle('settings:load', () => loadAppSettings())
+
+  ipcMain.handle('settings:save', (_evt, payload: unknown) => {
+    const incoming = coerceAppSettings(payload)
+    const prev = loadAppSettings()
+    saveAppSettings(incoming, prev)
+    broadcast('settings:updated', {})
+    return { ok: true as const }
+  })
+
+  ipcMain.handle('settings:uiSummary', () => getSettingsUiSummary())
+
+  ipcMain.handle(
+    'settings:validateGeneration',
+    (_evt, op: 'characters' | 'fragments' | 'clips') => {
+      if (op === 'clips') {
+        const v = validateVideoProvider()
+        if (!v.ok) return { ok: false as const, message: v.message }
+        return validateGenerationGate('clips')
+      }
+      return validateGenerationGate(op)
+    }
+  )
+
   ipcMain.handle('gemini:chat', (_evt, payload: { messages: GeminiTurn[] }) => {
     const messages = Array.isArray(payload?.messages) ? payload.messages : []
-    return callGemini(getGeminiApiKey(), messages)
+    return callTextModelConversation(messages)
   })
 
   ipcMain.handle('gemini:characterPortrait', (_evt, payload: { prompt?: string }) => {
     const prompt = typeof payload?.prompt === 'string' ? payload.prompt : ''
-    return generateCharacterPortrait(getGeminiApiKey(), prompt)
+    return generateCharacterPortraitRouted(prompt)
   })
 
   ipcMain.handle('characters:load', (_evt, sessionId: string) => {
@@ -143,4 +195,58 @@ export function registerIpc(): void {
     }
     return approveFragments(sessionId)
   })
+
+  ipcMain.handle('project:status', (_evt, sessionId: string) => {
+    if (typeof sessionId !== 'string' || !sessionId) return undefined
+    return readProjectStatus(sessionId)
+  })
+
+  ipcMain.handle('clips:start', (_evt, sessionId: string) => {
+    if (typeof sessionId !== 'string' || !sessionId) {
+      return Promise.resolve({ ok: false as const, error: 'Missing sessionId' })
+    }
+    const v = validateVideoProvider()
+    if (!v.ok) {
+      broadcast('clips:log', { sessionId, kind: 'error', text: v.message })
+      return Promise.resolve({ ok: false as const, error: v.message })
+    }
+    const g = validateGenerationGate('clips')
+    if (!g.ok) {
+      broadcast('clips:log', { sessionId, kind: 'error', text: g.message })
+      return Promise.resolve({ ok: false as const, error: g.message })
+    }
+    void runClipPipeline({ sessionId })
+    return Promise.resolve({ ok: true as const })
+  })
+
+  ipcMain.handle('clips:pause', () => {
+    clipsPause()
+    return Promise.resolve({ ok: true as const })
+  })
+
+  ipcMain.handle('clips:resume', (_evt, sessionId: string) => {
+    if (typeof sessionId !== 'string' || !sessionId) {
+      return Promise.resolve({ ok: false as const, error: 'Missing sessionId' })
+    }
+    return clipsResume(sessionId)
+  })
+
+  ipcMain.handle('clips:regenerate', (_evt, payload: { sessionId: string; frameId: number }) => {
+    if (!payload?.sessionId || typeof payload.frameId !== 'number') {
+      return Promise.resolve({ ok: false as const, error: 'Invalid payload' })
+    }
+    return regenerateClipFrame(payload.sessionId, payload.frameId)
+  })
+
+  ipcMain.handle('clips:busy', () => clipsPipelineIsBusy())
+
+  ipcMain.handle(
+    'clips:mediaUrl',
+    (_evt, payload: { sessionId: string; relativePath: string }) => {
+      if (!payload?.sessionId || !payload.relativePath) return ''
+      const rel = payload.relativePath.replace(/^[/\\]+/, '')
+      const abs = join(sessionDir(payload.sessionId), ...rel.split('/'))
+      return clipMediaUrlFromPath(abs)
+    }
+  )
 }

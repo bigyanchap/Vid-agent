@@ -31,6 +31,10 @@ export type FragmentFrame = {
   who_says_what: FragmentDialogueLine[]
   status: string
   video_path: string | null
+  /** Set when clip was produced via Imagen + ffmpeg instead of Veo */
+  used_fallback?: boolean
+  /** Last error when status is failed */
+  error?: string
 }
 
 export type FragmentsMeta = {
@@ -95,6 +99,8 @@ function normalizeFrame(raw: unknown, index: number): FragmentFrame {
     ? o.characters_present.filter((id): id is string => typeof id === 'string')
     : []
   const status = typeof o.status === 'string' && o.status ? o.status : 'pending'
+  const used_fallback = o.used_fallback === true
+  const error = typeof o.error === 'string' ? o.error : undefined
   return {
     frame_id: index + 1,
     story_chunk: typeof o.story_chunk === 'string' ? o.story_chunk : '',
@@ -105,7 +111,9 @@ function normalizeFrame(raw: unknown, index: number): FragmentFrame {
     transition: typeof o.transition === 'string' ? o.transition : 'cut',
     who_says_what: who,
     status,
-    video_path: o.video_path === null || typeof o.video_path === 'string' ? (o.video_path as string | null) : null
+    video_path: o.video_path === null || typeof o.video_path === 'string' ? (o.video_path as string | null) : null,
+    ...(used_fallback ? { used_fallback: true } : {}),
+    ...(error !== undefined ? { error } : {})
   }
 }
 

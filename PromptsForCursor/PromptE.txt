@@ -1,0 +1,223 @@
+CONTEXT:
+Script breakdown is approved. characters.json and fragments.json 
+are both saved. The next step is generating one video clip per 
+frame. Use Google's Gemini API for the video services also.
+Trigger Points:
+
+The "Generate Clips" action must be triggerable from two places:
+
+1. Bottom of the Script Breakdown tab
+   Show this button only after fragments.json is approved and locked.
+   Text: "Proceed to Clip Generation →"
+
+2. Inside the Agent Chat panel
+   After the script approval messages, the agent posts a message 
+   saying the breakdown is approved and clips are ready to generate,
+   with an inline action button below the message bubble.
+
+Both trigger the same thing: navigate to the Clips tab and 
+start the generation pipeline.
+
+The Clip Generation Pipeline:
+
+Process one frame at a time in frame_id order.
+Never process two frames at once.
+Save fragments.json after every single frame — not in batches.
+
+For each frame, follow this exact sequence:
+  1. Build a video generation prompt for that frame
+  2. Try Veo 3 first
+  3. If Veo 3 fails or times out, run the FALLBACK
+  4. Save the result and update the frame status
+  5. Tell the UI the frame is done
+
+
+BUILDING THE VIDEO PROMPT — lib/prompts/clips.ts :
+
+Create a function called buildClipPrompt that takes a frame, 
+the full characters array, and the story meta.
+
+The function should assemble a single readable prompt string 
+containing all of the following in plain English paragraphs:
+
+- The scene description and story chunk for this frame
+- The camera hint and duration
+- The visual style from meta
+- Any dialogue from who_says_what, written naturally 
+  e.g. "Hoppy says: bring it on"
+- The prompt_fragment of every character present in this frame,
+  joined into one paragraph
+- A strict consistency instruction listing the never_changes 
+  items for each character present, written as hard rules
+- A closing instruction telling the model not to alter any 
+  character appearance, outfit, or colors
+
+Store this function in lib/prompts/clips.ts and import it 
+wherever the generation pipeline runs.
+
+AI Model Usage:
+
+Use Model: veo-3.0-generate
+Use the Google GenAI SDK already in the project.
+
+Call generateVideo with the built prompt and the frame's 
+duration_seconds and a 16:9 aspect ratio.
+
+Veo 3 returns an operation that needs polling.
+Poll every 10 seconds.
+If not done after 3 minutes, treat it as a timeout and 
+move to the fallback.
+
+When the video URI comes back, download it and save it as:
+  frames/frame_001.mp4  (zero-padded frame_id, 3 digits)
+
+FALLBACK: IMAGEN 3 + FFMPEG:
+
+Run this only when Veo 3 fails or times out.
+Three steps in order:
+
+Step 1 — Generate a still image using Imagen 3
+  Model: imagen-3.0-generate-002
+  Use the same clip prompt built above.
+  Save the image as: frames/frame_001_still.png
+
+Step 2 — Animate the still image into a video using ffmpeg
+  Use ffmpeg-static so there is no system dependency.
+  Apply a slow Ken Burns zoom effect over the frame's duration.
+  Output a standard H.264 mp4 at 1920x1080.
+  Save as: frames/frame_001.mp4
+
+Step 3 — Burn the scene description as a caption
+  During the ffmpeg step, overlay the first 80 characters of 
+  scene_description as white text in a semi-transparent black 
+  bar at the bottom of the video.
+  This makes fallback clips still readable during the demo.
+
+Mark used_fallback: true on the frame in fragments.json.
+
+AFTER EACH FRAME: 
+
+Whether Veo 3 or fallback:
+  Set frame.status to "done"
+  Set frame.video_path to the relative path of the mp4
+  Set frame.used_fallback to true or false
+  Save fragments.json immediately
+
+If both Veo 3 and fallback fail:
+  Set frame.status to "failed"
+  Set frame.error to the error message
+  Do not stop the pipeline — continue to the next frame
+
+After each frame, send an IPC event to the renderer so 
+the UI can update that card in real time without waiting 
+for the full pipeline to finish.
+
+
+CLIPS TAB UI:
+
+PROGRESS BAR
+A very thin 3px bar at the very top of the Clips tab.
+Fill progresses left to right as frames complete.
+Shows done/total count next to it.
+
+GENERATION CONTROLS
+One row below the progress bar.
+Left side: "CLIP GENERATION · {done}/{total} frames" in small 
+monospace text.
+Right side: one button that changes based on state —
+  Not started   →  "Generate All Clips"  (filled dark button)
+  Running        →  "Pause"              (outlined button)
+  Paused         →  "Resume"             (filled dark button)
+  All done       →  "Proceed to Final Video →" (filled dark)
+
+Pause means: finish the current frame then stop.
+Never cut a frame mid-generation.
+Resume picks up from the next pending frame.
+
+CLIP GRID:
+Two column grid of clip cards below the controls.
+Each card has two parts:
+
+Top — the video area, 16:9 aspect ratio, dark background:
+  Pending:    Show frame number and scene description in grey italic
+  Generating: Pulsing dark background with a spinner and 
+              "Generating with Veo 3.1..." text
+  Done:       Autoplay muted looping video, show controls on hover
+  Fallback:   Same video but with a small "FALLBACK" badge 
+              top-left corner in amber
+  Failed:     Red tint with "⚠ Failed" and a Retry button
+
+Bottom — info strip:
+  Row 1: Frame number on left, status badge on right
+         Add a FALLBACK badge in amber when used_fallback is true
+  Row 2: camera hint · duration · transition in small monospace
+  Row 3: names of characters present, truncated if too long
+
+Status badge colors — same system as Script Breakdown tab:
+  PENDING:    light grey background
+  GENERATING: yellow background, pulse animation
+  DONE:       green background
+  FAILED:     red background
+  FALLBACK:   amber background
+
+AGENT CHAT MESSAGES:
+
+When generation starts:
+  "Starting clip generation. Processing {n} frames 
+   one by one with Veo 3.1."
+
+Every 3 frames:
+  "Frame {n} of {total} done."
+
+When fallback is used:
+  "Frame {n}: Veo 3 was unavailable, used image fallback."
+
+When a frame fails entirely:
+  "Frame {n} failed. Moving on to the next frame."
+
+When everything is done:
+  "All clips generated. {success} with Veo 3.1, {fallback} 
+   used fallback, {failed} failed.
+   Ready to stitch the final video."
+  Show an inline action button: "Proceed to Final Video →"
+
+FILE STRUCTURE AFTER CLIPS
+
+userData/projects/{session_id}/
+├── project.json              ← update status to "clips_done"
+├── skills/
+│   ├── characters.json
+│   └── fragments.json        ← each frame now has video_path,
+│                                status, used_fallback
+└── frames/
+    ├── frame_001.mp4
+    ├── frame_002.mp4
+    ├── frame_003_still.png   ← kept if fallback was used
+    └── ...
+
+IF USER DOESN'T LIKE THE CLIP GENERATION:
+DONE state clip card — add the "Regenerate" button:
+  Reruns the pipeline for the current, single frame only.
+  Resets frame status to "pending" then starts generation.
+  border: 1px solid var(--border)
+  color: var(--text-secondary)
+  font-size: 11px, background transparent
+  on hover: border-color var(--border-strong), 
+            color var(--text-primary)
+In the Agent, When user clicks Regenerate on a frame, Agent says: "Regenerating frame {n}..."
+  After done: "Frame {n} regenerated successfully." 
+              or "Frame {n} regeneration failed."
+
+INTERRUPTED GENERATION:
+If the app is closed while clips are generating,
+set project.json status to "clips_in_progress".
+On next app open, detect this status and show a Resume button — never auto-restart generation.
+
+On app reopen with status "clips_in_progress":
+  Navigate automatically to the Clips tab.
+  Show the Resume button in the Generation Controls 
+  row on the right side, same style as the 
+  Paused → Resume state.
+
+
+  

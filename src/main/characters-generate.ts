@@ -4,8 +4,8 @@ import {
   type CharacterEntry,
   type CharactersDocument
 } from '../shared/characters-types'
-import { getGeminiApiKey } from './config-store'
-import { callGeminiSystemUser } from './gemini'
+import { callTextModelSystemUser } from './provider-text'
+import { loadAppSettings, resolveApiKeys, validateGenerationGate } from './settings-store'
 import {
   charactersPath,
   readCharactersFile,
@@ -110,12 +110,26 @@ export async function generateAndSaveCharacters(
 
   await removeScriptFragmentsIfAny(sessionId)
 
-  const apiKey = getGeminiApiKey()
+  const gate = validateGenerationGate('characters')
+  if (!gate.ok) {
+    return { ok: false, error: gate.message }
+  }
+
+  const s = loadAppSettings()
+  const { text: textKey } = resolveApiKeys(s)
+  if (!textKey) {
+    return {
+      ok: false,
+      error:
+        'Text model API key is missing. Go to Settings → Text Model to add it.'
+    }
+  }
+
   try {
-    console.log('[Vid-Agent] Generate Characters → Gemini request')
+    console.log('[Vid-Agent] Generate Characters → text model request')
     console.log('--- systemInstruction (characters generation) ---\n' + CHARACTERS_GENERATION_PROMPT)
     console.log('--- user message (theme / setup + story from UI) ---\n' + trimmed)
-    const res = await callGeminiSystemUser(apiKey, CHARACTERS_GENERATION_PROMPT, trimmed)
+    const res = await callTextModelSystemUser(CHARACTERS_GENERATION_PROMPT, trimmed)
     if (res.error) {
       return { ok: false, error: res.error }
     }

@@ -441,7 +441,7 @@ function CharacterCard({
     onAppendAgentLine('user', `See how ${label} looks.`)
     onAppendAgentLine(
       'model',
-      `I'm generating a preview image for "${label}" from this character sheet (Gemini image model). One moment…`
+      `I'm generating a preview image for "${label}" from this character sheet (your Image Model in Settings). One moment…`
     )
     setPortrait((prev) => ({ loading: true, error: null, dataUrl: prev.dataUrl }))
     const prompt = buildCharacterPortraitPrompt(char, storyStyle, storyLanguage)

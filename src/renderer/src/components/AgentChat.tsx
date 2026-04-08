@@ -14,7 +14,12 @@ type GeminiTurn = { role: 'user' | 'model'; text: string }
 
 type Line =
   | { id: string; kind: 'user'; text: string }
-  | { id: string; kind: 'model'; text: string }
+  | {
+      id: string
+      kind: 'model'
+      text: string
+      clipAction?: 'proceed-clips' | 'proceed-video'
+    }
   | { id: string; kind: 'error'; text: string }
 
 let idSeq = 0
@@ -24,7 +29,7 @@ function nextId(): string {
 }
 
 const WELCOME_MESSAGE =
-  'Vid-Agent ready. Write your story and press Generate Characters to begin.'
+  'StoryFlow ready. Write your story and press Generate Characters to begin.'
 
 const GENERATE_CHARACTERS_FROM_STORY = 'Generate Characters from Story'
 
@@ -32,6 +37,7 @@ const CHARACTERS_APPROVE_SUGGESTION = 'Approve characters and continue'
 
 export type AgentChatHandle = {
   appendLine: (kind: 'user' | 'model' | 'error', text: string) => void
+  appendModelWithClipAction: (text: string, clipAction: 'proceed-clips' | 'proceed-video') => void
 }
 
 type ChatContext = 'story' | 'characters' | 'other'
@@ -46,6 +52,9 @@ type AgentChatProps = {
   /** Soft pulse + spectrum border on the story suggestion after a long sample insert. */
   gentlePulseGenerateCharacters?: boolean
   onApproveCharactersFromChat?: () => void
+  clipsGenerating?: boolean
+  onProceedToClipGeneration?: () => void
+  onProceedToFinalVideo?: () => void
 }
 
 function PipelineSpinner({ caption }: { caption: string }) {
@@ -102,7 +111,10 @@ export const AgentChat = forwardRef<AgentChatHandle, AgentChatProps>(function Ag
     canApproveCharacters = false,
     onGenerateCharacters,
     gentlePulseGenerateCharacters = false,
-    onApproveCharactersFromChat
+    onApproveCharactersFromChat,
+    clipsGenerating = false,
+    onProceedToClipGeneration,
+    onProceedToFinalVideo
   },
   ref
 ) {
@@ -115,7 +127,7 @@ export const AgentChat = forwardRef<AgentChatHandle, AgentChatProps>(function Ag
   const listRef = useRef<HTMLDivElement>(null)
   const draftRef = useRef<HTMLTextAreaElement>(null)
 
-  const pipelineBusy = charactersGenerating || charactersApproving || loading
+  const pipelineBusy = charactersGenerating || charactersApproving || loading || clipsGenerating
 
   const syncDraftHeight = useCallback(() => {
     const el = draftRef.current
@@ -140,6 +152,12 @@ export const AgentChat = forwardRef<AgentChatHandle, AgentChatProps>(function Ag
     () => ({
       appendLine(kind, text) {
         setLines((prev) => [...prev, { id: nextId(), kind, text }])
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => scrollToBottom())
+        })
+      },
+      appendModelWithClipAction(text, clipAction) {
+        setLines((prev) => [...prev, { id: nextId(), kind: 'model', text, clipAction }])
         requestAnimationFrame(() => {
           requestAnimationFrame(() => scrollToBottom())
         })
@@ -191,13 +209,40 @@ export const AgentChat = forwardRef<AgentChatHandle, AgentChatProps>(function Ag
               <span className="chat-bubble__label chat-bubble__label--agent">Agent</span>
             )}
             {line.kind === 'error' && <span className="chat-bubble__label">Error</span>}
-            <div className="chat-bubble__text">{line.text}</div>
+            <div className="chat-bubble__text" style={{ whiteSpace: 'pre-wrap' }}>
+              {line.text}
+            </div>
+            {line.kind === 'model' && line.clipAction === 'proceed-clips' && (
+              <div className="chat-bubble__actions">
+                <button
+                  type="button"
+                  className="agent-chat__clip-action"
+                  onClick={() => onProceedToClipGeneration?.()}
+                >
+                  Proceed to Clip Generation →
+                </button>
+              </div>
+            )}
+            {line.kind === 'model' && line.clipAction === 'proceed-video' && (
+              <div className="chat-bubble__actions">
+                <button
+                  type="button"
+                  className="agent-chat__clip-action"
+                  onClick={() => onProceedToFinalVideo?.()}
+                >
+                  Proceed to Final Video →
+                </button>
+              </div>
+            )}
           </div>
         ))}
         {loading && <PipelineSpinner caption="Thinking…" />}
         {charactersGenerating && !loading && <PipelineSpinner caption="AI Brain is working…" />}
         {charactersApproving && !loading && !charactersGenerating && (
           <PipelineSpinner caption="Saving approval…" />
+        )}
+        {clipsGenerating && !loading && !charactersGenerating && !charactersApproving && (
+          <PipelineSpinner caption="Generating clips…" />
         )}
       </div>
       <div className="agent-chat__composer">

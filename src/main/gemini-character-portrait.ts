@@ -10,14 +10,20 @@ type InlinePart = {
   inlineData?: { mimeType?: string; data?: string }
 }
 
-function portraitUrl(apiKey: string): string {
+function portraitUrl(apiKey: string, modelId: string): string {
+  const id = modelId.trim() || GEMINI_IMAGE_MODEL
   return (
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent?key=` +
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(id)}:generateContent?key=` +
     encodeURIComponent(apiKey)
   )
 }
 
-export async function generateCharacterPortrait(apiKey: string, prompt: string): Promise<CharacterPortraitResult> {
+/** @param modelId Gemini image-capable model id (e.g. from Settings). Defaults to {@link GEMINI_IMAGE_MODEL}. */
+export async function generateCharacterPortrait(
+  apiKey: string,
+  prompt: string,
+  modelId?: string
+): Promise<CharacterPortraitResult> {
   if (!apiKey) {
     return { ok: false, error: 'Add a Gemini API key in Settings (gear icon).' }
   }
@@ -28,7 +34,7 @@ export async function generateCharacterPortrait(apiKey: string, prompt: string):
   }
 
   try {
-    const res = await fetch(portraitUrl(apiKey), {
+    const res = await fetch(portraitUrl(apiKey, modelId ?? GEMINI_IMAGE_MODEL), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

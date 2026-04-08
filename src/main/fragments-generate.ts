@@ -5,8 +5,8 @@ import {
   type FragmentsDocument,
   type FragmentsGeneratePayload
 } from '../shared/fragments-types'
-import { getGeminiApiKey } from './config-store'
-import { callGeminiSystemUser } from './gemini'
+import { callTextModelSystemUser } from './provider-text'
+import { loadAppSettings, resolveApiKeys, validateGenerationGate } from './settings-store'
 import {
   fragmentsPath,
   mergeProjectJson,
@@ -29,9 +29,18 @@ export async function generateAndSaveFragments(
     return { ok: false, error: 'No characters.json found. Approve characters first.' }
   }
 
-  const apiKey = getGeminiApiKey()
-  if (!apiKey) {
-    return { ok: false, error: 'Add a Gemini API key in Settings (gear icon).' }
+  const gate = validateGenerationGate('fragments')
+  if (!gate.ok) {
+    return { ok: false, error: gate.message }
+  }
+
+  const { text: textKey } = resolveApiKeys(loadAppSettings())
+  if (!textKey) {
+    return {
+      ok: false,
+      error:
+        'Text model API key is missing. Go to Settings → Text Model to add it.'
+    }
   }
 
   const userMessage = JSON.stringify({
@@ -42,11 +51,11 @@ export async function generateAndSaveFragments(
     characters: chars
   })
 
-  console.log('[Vid-Agent] Generate Script Breakdown → Gemini request')
+  console.log('[Vid-Agent] Generate Script Breakdown → text model request')
   console.log('--- systemInstruction (fragments generation) ---\n' + FRAGMENTS_GENERATION_PROMPT)
   console.log('--- user message (fragments JSON payload) ---\n' + userMessage)
 
-  const res = await callGeminiSystemUser(apiKey, FRAGMENTS_GENERATION_PROMPT, userMessage)
+  const res = await callTextModelSystemUser(FRAGMENTS_GENERATION_PROMPT, userMessage)
   if (res.error) {
     return { ok: false, error: res.error }
   }

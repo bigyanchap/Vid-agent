@@ -3,6 +3,8 @@ import { electronAPI } from '@electron-toolkit/preload'
 
 export type ChatMessage = { role: 'user' | 'model'; text: string }
 
+export type AppSettingsPayload = Record<string, unknown>
+
 export type GeminiChatResult = { text?: string; error?: string }
 
 export type CharacterPortraitResult =
@@ -14,10 +16,53 @@ export type CharactersDocumentPayload = Record<string, unknown>
 export type FragmentsDocumentPayload = Record<string, unknown>
 export type FragmentsGeneratePayload = Record<string, unknown>
 
+export type ClipsDocUpdatePayload = {
+  sessionId: string
+  document: FragmentsDocumentPayload
+  frameIndex: number
+}
+
+export type ClipsLogPayload = {
+  sessionId: string
+  kind: 'user' | 'model' | 'error'
+  text: string
+  clipAction?: 'proceed-clips' | 'proceed-video'
+}
+
+export type ClipsPipelineStatePayload = {
+  sessionId: string
+  running: boolean
+  paused: boolean
+}
+
 const api = {
   getGeminiApiKey: (): Promise<string> => ipcRenderer.invoke('config:getGeminiApiKey'),
   setGeminiApiKey: (key: string): Promise<void> =>
     ipcRenderer.invoke('config:setGeminiApiKey', key),
+
+  settingsLoad: (): Promise<AppSettingsPayload> => ipcRenderer.invoke('settings:load'),
+
+  settingsSave: (payload: AppSettingsPayload): Promise<{ ok: true }> =>
+    ipcRenderer.invoke('settings:save', payload),
+
+  settingsUiSummary: (): Promise<{
+    textProviderLabel: string
+    videoProviderLabel: string
+    settingsGearBadge: boolean
+  }> => ipcRenderer.invoke('settings:uiSummary'),
+
+  settingsValidateGeneration: (
+    op: 'characters' | 'fragments' | 'clips'
+  ): Promise<{ ok: true } | { ok: false; message: string }> =>
+    ipcRenderer.invoke('settings:validateGeneration', op),
+
+  onSettingsUpdated: (cb: () => void): (() => void) => {
+    const fn = (): void => cb()
+    ipcRenderer.on('settings:updated', fn)
+    return () => {
+      ipcRenderer.removeListener('settings:updated', fn)
+    }
+  },
   geminiChat: (messages: ChatMessage[]): Promise<GeminiChatResult> =>
     ipcRenderer.invoke('gemini:chat', { messages }),
 
@@ -85,7 +130,55 @@ const api = {
   ): Promise<
     | { ok: true; data: FragmentsDocumentPayload }
     | { ok: false; error: string }
-  > => ipcRenderer.invoke('fragments:approve', sessionId)
+  > => ipcRenderer.invoke('fragments:approve', sessionId),
+
+  projectStatus: (sessionId: string): Promise<string | undefined> =>
+    ipcRenderer.invoke('project:status', sessionId),
+
+  clipsStart: (sessionId: string): Promise<{ ok: true } | { ok: false; error: string }> =>
+    ipcRenderer.invoke('clips:start', sessionId),
+
+  clipsPause: (): Promise<{ ok: true }> => ipcRenderer.invoke('clips:pause'),
+
+  clipsResume: (
+    sessionId: string
+  ): Promise<{ ok: true } | { ok: false; error: string }> =>
+    ipcRenderer.invoke('clips:resume', sessionId),
+
+  clipsRegenerate: (
+    sessionId: string,
+    frameId: number
+  ): Promise<{ ok: true } | { ok: false; error: string }> =>
+    ipcRenderer.invoke('clips:regenerate', { sessionId, frameId }),
+
+  clipsBusy: (): Promise<boolean> => ipcRenderer.invoke('clips:busy'),
+
+  clipsMediaUrl: (sessionId: string, relativePath: string): Promise<string> =>
+    ipcRenderer.invoke('clips:mediaUrl', { sessionId, relativePath }),
+
+  onClipsDocUpdate: (cb: (p: ClipsDocUpdatePayload) => void): (() => void) => {
+    const fn = (_e: unknown, p: ClipsDocUpdatePayload): void => cb(p)
+    ipcRenderer.on('clips:docUpdate', fn)
+    return () => {
+      ipcRenderer.removeListener('clips:docUpdate', fn)
+    }
+  },
+
+  onClipsLog: (cb: (p: ClipsLogPayload) => void): (() => void) => {
+    const fn = (_e: unknown, p: ClipsLogPayload): void => cb(p)
+    ipcRenderer.on('clips:log', fn)
+    return () => {
+      ipcRenderer.removeListener('clips:log', fn)
+    }
+  },
+
+  onClipsPipelineState: (cb: (p: ClipsPipelineStatePayload) => void): (() => void) => {
+    const fn = (_e: unknown, p: ClipsPipelineStatePayload): void => cb(p)
+    ipcRenderer.on('clips:pipelineState', fn)
+    return () => {
+      ipcRenderer.removeListener('clips:pipelineState', fn)
+    }
+  }
 }
 
 if (process.contextIsolated) {

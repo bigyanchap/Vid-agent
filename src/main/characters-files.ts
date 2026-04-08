@@ -16,6 +16,24 @@ export function skillsDir(sessionId: string): string {
   return join(sessionDir(sessionId), 'skills')
 }
 
+export function framesDir(sessionId: string): string {
+  return join(sessionDir(sessionId), 'frames')
+}
+
+export function frameMp4Relative(frameId: number): string {
+  return `frames/frame_${String(frameId).padStart(3, '0')}.mp4`
+}
+
+export function frameStillRelative(frameId: number): string {
+  return `frames/frame_${String(frameId).padStart(3, '0')}_still.png`
+}
+
+export async function ensureFramesDir(sessionId: string): Promise<string> {
+  const dir = framesDir(sessionId)
+  await mkdir(dir, { recursive: true })
+  return dir
+}
+
 export function charactersPath(sessionId: string): string {
   return join(skillsDir(sessionId), 'characters.json')
 }
@@ -126,4 +144,10 @@ export async function mergeProjectJson(
     JSON.stringify({ ...cur, ...patch }, null, 2),
     'utf-8'
   )
+}
+
+export async function readProjectStatus(sessionId: string): Promise<string | undefined> {
+  const j = await readProjectJson(sessionId)
+  const s = j.status
+  return typeof s === 'string' ? s : undefined
 }

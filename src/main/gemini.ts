@@ -2,22 +2,24 @@ import { GEMINI_MODEL } from './gemini-model'
 
 export type GeminiTurn = { role: 'user' | 'model'; text: string }
 
-function generateContentUrl(apiKey: string): string {
+export function geminiGenerateContentUrl(apiKey: string, modelId: string): string {
+  const model = modelId.trim() || GEMINI_MODEL
   return (
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=` +
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=` +
     encodeURIComponent(apiKey)
   )
 }
 
 export async function callGemini(
   apiKey: string,
-  messages: GeminiTurn[]
+  messages: GeminiTurn[],
+  modelId?: string
 ): Promise<{ text?: string; error?: string }> {
   if (!apiKey) {
     return { error: 'Add a Gemini API key in Settings (gear icon).' }
   }
 
-  const url = generateContentUrl(apiKey)
+  const url = geminiGenerateContentUrl(apiKey, modelId ?? GEMINI_MODEL)
 
   const contents = messages.map((m) => ({
     role: m.role,
@@ -51,13 +53,14 @@ export async function callGemini(
 export async function callGeminiSystemUser(
   apiKey: string,
   systemPrompt: string,
-  userMessage: string
+  userMessage: string,
+  modelId?: string
 ): Promise<{ text?: string; error?: string }> {
   if (!apiKey) {
     return { error: 'Add a Gemini API key in Settings (gear icon).' }
   }
 
-  const url = generateContentUrl(apiKey)
+  const url = geminiGenerateContentUrl(apiKey, modelId ?? GEMINI_MODEL)
 
   const body = {
     systemInstruction: { parts: [{ text: systemPrompt }] },

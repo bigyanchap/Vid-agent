@@ -1,0 +1,179 @@
+Add a Settings page accessible from the gear icon 
+in the activity bar. Settings open as a full page 
+inside the main editor area, not a dialog box.
+The activity bar gear icon becomes active when 
+Settings page is open.
+
+Settings are saved to: userData/settings.json
+
+SECTION 1: TEXT MODEL
+
+Provider dropdown options:
+  Gemini, OpenAI, Anthropic, Grok, Mistral
+
+Fields:
+- Provider dropdown
+- Model name: free text input
+  Default placeholder per provider:
+    Gemini    → gemini-2.5-flash
+    OpenAI    → gpt-4o
+    Anthropic → claude-sonnet-4-5
+    Grok      → grok-3
+    Mistral   → mistral-large
+- API Key: password input, masked
+
+SECTION 2: IMAGE MODEL
+
+Provider dropdown options:
+  Imagen 3, DALL-E 3, Flux, Stability AI
+
+Fields:
+- Provider dropdown
+- Model name: free text input
+  Default placeholder per provider:
+    Imagen 3     → imagen-3.0-generate-002
+    DALL-E 3     → dall-e-3
+    Flux         → flux-pro
+    Stability AI → stable-diffusion-3
+- API Key: password input, masked
+- Checkbox: "Use same API key as Text Model"
+  Always visible regardless of provider selected.
+  When checked: API key field is disabled and 
+  greyed out, uses text model key at runtime.
+
+SECTION 3: VIDEO MODEL
+
+Provider dropdown options with approximate 
+price per minute in parentheses:
+  Veo 2         (~$21/min)
+  Veo 3         (~$30/min)
+  Seedance 2.0  (~$1.20/min)
+  Runway Gen 2  (~$3/min)
+  Runway Gen 3  (~$4.80/min)
+  Pika          (~$4.80/min)
+  Kling         (~$2.40/min)
+  Stability AI  (~$1.80/min)
+
+Add a note below the dropdown in small muted text:
+  "Prices added here were last updated at 4/6/2026 
+   Check provider website for latest updated rates."
+
+Fields:
+- Provider dropdown
+- Model name: free text input
+  Default placeholder per provider:
+    Veo 2        → veo-2.0-flash-exp
+    Veo 3        → veo-3.0-generate
+    Seedance 2.0 → seedance-2.0
+    Runway Gen 2 → gen2
+    Runway Gen 3 → gen3-turbo
+    Pika         → pika-2.0
+    Kling        → kling-v1-5
+    Stability AI → stable-video-diffusion
+- API Key: password input, masked
+- Checkbox: "Use same API key as Text Model"
+  Always visible. Same behavior as Image section.
+
+STORAGE
+
+Save to userData/settings.json:
+{
+  "text_model": {
+    "provider": "gemini",
+    "model": "gemini-2.5-flash",
+    "api_key": ""
+  },
+  "image_model": {
+    "provider": "imagen3",
+    "model": "imagen-3.0-generate-002",
+    "api_key": "",
+    "use_text_key": true
+  },
+  "video_model": {
+    "provider": "veo2",
+    "model": "veo-2.0-flash-exp",
+    "api_key": "",
+    "use_text_key": false
+  }
+}
+
+API keys must be stored encrypted using 
+Electron's safeStorage API.
+Never store plain text API keys on disk.
+
+PROVIDER ROUTING
+
+Before every API call, read settings.json and 
+route to the correct provider:
+
+Text routing:
+  gemini      → Google GenAI SDK
+  openai      → OpenAI SDK
+  anthropic   → Anthropic SDK
+  grok        → xAI REST API
+  mistral     → Mistral SDK
+
+Image routing:
+  imagen3     → Google GenAI SDK
+  dalle3      → OpenAI SDK
+  flux        → Flux REST API (fal.ai)
+  stability   → Stability AI REST API
+
+Video routing:
+  veo2        → Google GenAI SDK
+  veo3        → Google GenAI SDK
+  seedance    → ByteDance REST API
+  runwaygen2  → Runway REST API
+  runwaygen3  → Runway REST API
+  pika        → Pika REST API
+  kling       → Kuaishou REST API
+  stability   → Stability AI REST API
+
+For any unrecognized provider string:
+  Show error in agent chat:
+  "Unknown provider: {provider}. 
+   Please check your Settings."
+
+VALIDATION
+
+When user clicks any generation button 
+(Generate Characters, Generate Script Breakdown, 
+Generate Clips) without a valid API key:
+
+Show an inline error in the Agent Chat panel:
+  "{Model type} API key is missing.
+   Go to Settings → {section name} to add it."
+
+Examples:
+  "Text model API key is missing. 
+   Go to Settings → Text Model to add it."
+  
+  "Video model API key is missing. 
+   Go to Settings → Video Model to add it."
+
+Do not block the UI — just post the message 
+in agent chat and scroll to it.
+Also highlight the Settings gear icon in the 
+activity bar with a red dot badge until the 
+key is filled.
+
+STATUS BAR
+
+Right side of status bar always shows:
+  "Text: {provider display name} · 
+   Video: {provider display name}"
+
+Examples:
+  "Text: Gemini · Video: Veo 3"
+  "Text: Claude · Video: Runway Gen 3"
+
+App title "Veo Chain" in the header 
+never changes regardless of provider selected.
+
+EXISTING CODE
+
+Do not remove any existing Gemini SDK code.
+Add all other provider SDKs and REST calls 
+alongside it.
+Provider is selected at runtime from settings.json,
+not hardcoded anywhere in the pipeline.

@@ -1,7 +1,9 @@
 import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { registerClipMediaProtocol } from './clip-protocol'
 import { registerIpc } from './ipc'
+import { markClipPipelineInterrupted } from './clips-pipeline'
 
 const icon = join(__dirname, '../../resources/icon.png')
 
@@ -38,6 +40,7 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  registerClipMediaProtocol()
   registerIpc()
   electronApp.setAppUserModelId('com.vidagent.app')
 
@@ -56,4 +59,8 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+app.on('before-quit', () => {
+  void markClipPipelineInterrupted()
 })

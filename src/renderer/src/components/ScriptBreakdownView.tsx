@@ -104,6 +104,10 @@ type Props = {
   charactersDocument: CharactersDocument | null
   onPersistedFragmentsChange: (doc: FragmentsDocument | null) => void
   onAppendAgentLine: (kind: 'user' | 'model' | 'error', text: string) => void
+  onScriptBreakdownApproved?: () => void
+  onProceedToClipGeneration?: () => void
+  /** Return false to abort (caller should post agent chat error). */
+  beforeGenerateFragments?: () => Promise<boolean>
 }
 
 export function ScriptBreakdownView({
@@ -115,7 +119,10 @@ export function ScriptBreakdownView({
   characterRepresentation,
   charactersDocument,
   onPersistedFragmentsChange,
-  onAppendAgentLine
+  onAppendAgentLine,
+  onScriptBreakdownApproved,
+  onProceedToClipGeneration,
+  beforeGenerateFragments
 }: Props) {
   const [meta, setMeta] = useState<FragmentsMeta | null>(null)
   const [frames, setFrames] = useState<LocalFragmentFrame[]>([])
@@ -210,6 +217,10 @@ export function ScriptBreakdownView({
   )
 
   const runGenerate = useCallback(async () => {
+    if (beforeGenerateFragments) {
+      const ok = await beforeGenerateFragments()
+      if (!ok) return
+    }
     setGenError(null)
     setGenerating(true)
     onAppendAgentLine('user', 'Generate Script Breakdown')
@@ -255,7 +266,8 @@ export function ScriptBreakdownView({
     renderingType,
     characterRepresentation,
     onAppendAgentLine,
-    onPersistedFragmentsChange
+    onPersistedFragmentsChange,
+    beforeGenerateFragments
   ])
 
   const onDragEnd = useCallback(
@@ -299,7 +311,7 @@ export function ScriptBreakdownView({
         setFrames(attachClientIds(res.data.frames))
         setDirtyIds(new Set())
         onPersistedFragmentsChange(res.data)
-        onAppendAgentLine('model', 'Script breakdown approved. The Clips tab is unlocked.')
+        onScriptBreakdownApproved?.()
       } else {
         setSaveError(res.error)
         onAppendAgentLine('error', res.error)
@@ -311,7 +323,7 @@ export function ScriptBreakdownView({
     } finally {
       setApproving(false)
     }
-  }, [sessionId, onAppendAgentLine, onPersistedFragmentsChange])
+  }, [sessionId, onAppendAgentLine, onPersistedFragmentsChange, onScriptBreakdownApproved])
 
   const updateFrame = useCallback(
     (clientId: string, patch: Partial<FragmentFrame>) => {
@@ -422,6 +434,13 @@ export function ScriptBreakdownView({
               Script breakdown approved
             </p>
             <p className="characters-panel__locked-question">Clips and the next pipeline steps are unlocked.</p>
+            <button
+              type="button"
+              className="btn-generate btn-generate--block script-breakdown__proceed-clips"
+              onClick={() => onProceedToClipGeneration?.()}
+            >
+              Proceed to Clip Generation →
+            </button>
           </div>
         </div>
       )}

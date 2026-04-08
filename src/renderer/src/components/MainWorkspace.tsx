@@ -5,15 +5,17 @@ import type {
   RenderingTypeChoice,
   StyleSetupKey
 } from '../sample-story'
-import { workspaceLabel, type WorkspaceViewId } from '../workspace-views'
+import { workspaceLabel, type EditorViewId, type WorkspaceViewId } from '../workspace-views'
 import { StoryView } from './StoryView'
 import { CharactersView } from './CharactersView'
+import { ClipsView } from './ClipsView'
 import { ScriptBreakdownView } from './ScriptBreakdownView'
+import { SettingsView } from './SettingsView'
 
-export type { WorkspaceViewId } from '../workspace-views'
+export type { WorkspaceViewId, EditorViewId } from '../workspace-views'
 
 type Props = {
-  active: WorkspaceViewId
+  active: EditorViewId
   story: string
   onStoryChange: (value: string) => void
   styleSetupFields: Record<StyleSetupKey, string>
@@ -38,6 +40,18 @@ type Props = {
   charactersSheetLocked: boolean
   onPersistedFragmentsChange: (doc: FragmentsDocument | null) => void
   onAppendAgentLine: (kind: 'user' | 'model' | 'error', text: string) => void
+  onScriptBreakdownApproved?: () => void
+  onProceedToClipGeneration?: () => void
+  fragmentsDocument: FragmentsDocument | null
+  projectStatus: string | undefined
+  clipPipeline: { running: boolean; paused: boolean }
+  onRefreshProjectStatus: () => void
+  onProceedToFinalVideo: () => void
+  onSettingsSaved?: () => void
+  beforeGenerateFragments?: () => Promise<boolean>
+  beforeGenerateClips?: () => Promise<boolean>
+  clipGeneratingLabel?: string
+  onCloseSettings?: () => void
 }
 
 export function MainWorkspace({
@@ -65,20 +79,35 @@ export function MainWorkspace({
   onCharactersUnlock,
   charactersSheetLocked,
   onPersistedFragmentsChange,
-  onAppendAgentLine
+  onAppendAgentLine,
+  onScriptBreakdownApproved,
+  onProceedToClipGeneration,
+  fragmentsDocument,
+  projectStatus,
+  clipPipeline,
+  onRefreshProjectStatus,
+  onProceedToFinalVideo,
+  onSettingsSaved,
+  beforeGenerateFragments,
+  beforeGenerateClips,
+  clipGeneratingLabel,
+  onCloseSettings
 }: Props) {
-  const pageTitle = workspaceLabel(active)
+  const pageTitle = active === 'settings' ? 'Settings' : workspaceLabel(active)
 
   return (
     <section className="main-workspace" aria-label="Editor">
       <div className="editor-breadcrumb">
-        <span className="editor-breadcrumb__muted">Vid-Agent</span>
+        <span className="editor-breadcrumb__muted">StoryFlow</span>
         <span className="editor-breadcrumb__sep" aria-hidden>
           ›
         </span>
         <span className="editor-breadcrumb__current">{pageTitle}</span>
       </div>
       <div className="editor-content">
+        {active === 'settings' && (
+          <SettingsView onSaved={onSettingsSaved} onClose={() => onCloseSettings?.()} />
+        )}
         {active === 'story' && (
           <StoryView
             story={story}
@@ -120,13 +149,23 @@ export function MainWorkspace({
             charactersDocument={charactersDocument}
             onPersistedFragmentsChange={onPersistedFragmentsChange}
             onAppendAgentLine={onAppendAgentLine}
+            onScriptBreakdownApproved={onScriptBreakdownApproved}
+            onProceedToClipGeneration={onProceedToClipGeneration}
+            beforeGenerateFragments={beforeGenerateFragments}
           />
         )}
         {active === 'clips' && (
-          <div className="workspace-placeholder">
-            <p className="editor-section-label">Clips</p>
-            <p>Clips — coming next.</p>
-          </div>
+          <ClipsView
+            sessionId={sessionId}
+            fragmentsDocument={fragmentsDocument}
+            charactersDocument={charactersDocument}
+            projectStatus={projectStatus}
+            clipPipeline={clipPipeline}
+            onRefreshProjectStatus={onRefreshProjectStatus}
+            onProceedToFinalVideo={onProceedToFinalVideo}
+            beforeGenerateClips={beforeGenerateClips}
+            clipGeneratingLabel={clipGeneratingLabel}
+          />
         )}
         {active === 'video' && (
           <div className="workspace-placeholder">

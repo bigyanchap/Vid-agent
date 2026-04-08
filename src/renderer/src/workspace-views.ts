@@ -5,6 +5,9 @@ export type WorkspaceViewId =
   | 'clips'
   | 'video'
 
+/** Full editor routing includes full-page Settings (not an activity-bar tab). */
+export type EditorViewId = WorkspaceViewId | 'settings'
+
 export const WORKSPACE_VIEWS: { id: WorkspaceViewId; label: string }[] = [
   { id: 'story', label: 'Story' },
   { id: 'characters', label: 'Characters' },
