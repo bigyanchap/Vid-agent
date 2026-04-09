@@ -28,6 +28,10 @@ export function frameStillRelative(frameId: number): string {
   return `frames/frame_${String(frameId).padStart(3, '0')}_still.png`
 }
 
+export function frameSeedRelative(frameId: number, ext: 'png' | 'jpg' | 'webp'): string {
+  return `frames/frame_${String(frameId).padStart(3, '0')}_seed.${ext}`
+}
+
 export async function ensureFramesDir(sessionId: string): Promise<string> {
   const dir = framesDir(sessionId)
   await mkdir(dir, { recursive: true })

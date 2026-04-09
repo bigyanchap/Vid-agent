@@ -156,6 +156,25 @@ const api = {
   clipsMediaUrl: (sessionId: string, relativePath: string): Promise<string> =>
     ipcRenderer.invoke('clips:mediaUrl', { sessionId, relativePath }),
 
+  seedImageUpload: (
+    sessionId: string,
+    frameId: number,
+    dataBase64: string
+  ): Promise<{ ok: true } | { ok: false; error: string }> =>
+    ipcRenderer.invoke('seedImage:upload', { sessionId, frameId, dataBase64 }),
+
+  seedImageGenerate: (
+    sessionId: string,
+    frameId: number
+  ): Promise<{ ok: true } | { ok: false; error: string }> =>
+    ipcRenderer.invoke('seedImage:generate', { sessionId, frameId }),
+
+  seedImageClear: (
+    sessionId: string,
+    frameId: number
+  ): Promise<{ ok: true } | { ok: false; error: string }> =>
+    ipcRenderer.invoke('seedImage:clear', { sessionId, frameId }),
+
   onClipsDocUpdate: (cb: (p: ClipsDocUpdatePayload) => void): (() => void) => {
     const fn = (_e: unknown, p: ClipsDocUpdatePayload): void => cb(p)
     ipcRenderer.on('clips:docUpdate', fn)

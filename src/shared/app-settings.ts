@@ -2,7 +2,7 @@
 
 export type TextProviderId = 'gemini' | 'openai' | 'anthropic' | 'grok' | 'mistral'
 
-export type ImageProviderId = 'gemini' | 'imagen3' | 'dalle3' | 'flux' | 'stability'
+export type ImageProviderId = 'gemini' | 'imagen4' | 'imagen3' | 'dalle3' | 'flux' | 'stability'
 
 export type VideoProviderId =
   | 'veo2'
@@ -45,8 +45,8 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
     api_key: ''
   },
   image_model: {
-    provider: 'imagen3',
-    model: 'imagen-3.0-generate-002',
+    provider: 'imagen4',
+    model: 'imagen-4.0-generate-001',
     api_key: ''
   },
   video_model: {
@@ -56,23 +56,36 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   }
 }
 
+/** Human-facing provider names: company + product (Settings, status bar, logs). */
 export const TEXT_PROVIDER_LABEL: Record<TextProviderId, string> = {
-  gemini: 'Gemini',
+  gemini: 'Google Gemini',
   openai: 'OpenAI',
-  anthropic: 'Claude',
-  grok: 'Grok',
-  mistral: 'Mistral'
+  anthropic: 'Anthropic',
+  grok: 'xAI Grok',
+  mistral: 'Mistral AI'
 }
 
 export const VIDEO_PROVIDER_LABEL: Record<VideoProviderId, string> = {
-  veo2: 'Veo 2',
-  veo3: 'Veo 3',
-  seedance: 'Seedance 2.0',
-  runwaygen2: 'Runway Gen 2',
-  runwaygen3: 'Runway Gen 3',
-  pika: 'Pika',
-  kling: 'Kling',
+  veo2: 'Google Veo 2',
+  veo3: 'Google Veo 3',
+  seedance: 'ByteDance Seedance',
+  runwaygen2: 'Runway Gen-2',
+  runwaygen3: 'Runway Gen-3',
+  pika: 'Pika Labs (fal.ai)',
+  kling: 'Kling (fal.ai)',
   stability: 'Stability AI'
+}
+
+/** Approximate pricing note for the Settings video provider dropdown only. */
+export const VIDEO_PROVIDER_PRICE_HINT: Record<VideoProviderId, string> = {
+  veo2: '~$21/min',
+  veo3: '~$30/min',
+  seedance: '~$1.20/min',
+  runwaygen2: '~$3/min',
+  runwaygen3: '~$4.80/min',
+  pika: '~$4.80/min',
+  kling: '~$2.40/min',
+  stability: '~$1.80/min'
 }
 
 export const TEXT_MODEL_PLACEHOLDER: Record<TextProviderId, string> = {
@@ -85,22 +98,52 @@ export const TEXT_MODEL_PLACEHOLDER: Record<TextProviderId, string> = {
 
 export const IMAGE_MODEL_PLACEHOLDER: Record<ImageProviderId, string> = {
   gemini: 'gemini-3.1-flash-image-preview',
+  imagen4: 'imagen-4.0-generate-001',
   imagen3: 'imagen-3.0-generate-002',
   dalle3: 'dall-e-3',
-  flux: 'flux-pro',
+  flux: 'fal-ai/flux-pro/v1.1',
   stability: 'stable-diffusion-3'
 }
 
-/** UI label for image provider (status bar / docs). */
 export const IMAGE_PROVIDER_LABEL: Record<ImageProviderId, string> = {
-  gemini: 'Gemini',
-  imagen3: 'Imagen 3',
-  dalle3: 'DALL-E 3',
-  flux: 'Flux',
+  gemini: 'Google Gemini (image)',
+  imagen4: 'Google Imagen 4',
+  imagen3: 'Google Imagen 3',
+  dalle3: 'OpenAI DALL·E 3',
+  flux: 'Black Forest Labs Flux (fal.ai)',
   stability: 'Stability AI'
 }
 
 export type ModelOption = { value: string; label: string }
+
+/** Settings `<select>` order; labels use *PROVIDER_LABEL (+ price hint for video). */
+export const TEXT_PROVIDERS_ORDER: TextProviderId[] = [
+  'gemini',
+  'openai',
+  'anthropic',
+  'grok',
+  'mistral'
+]
+
+export const IMAGE_PROVIDERS_ORDER: ImageProviderId[] = [
+  'gemini',
+  'imagen4',
+  'imagen3',
+  'dalle3',
+  'flux',
+  'stability'
+]
+
+export const VIDEO_PROVIDERS_ORDER: VideoProviderId[] = [
+  'veo2',
+  'veo3',
+  'seedance',
+  'runwaygen2',
+  'runwaygen3',
+  'pika',
+  'kling',
+  'stability'
+]
 
 export const TEXT_MODEL_OPTIONS: Record<TextProviderId, ModelOption[]> = {
   gemini: [
@@ -130,9 +173,10 @@ export const TEXT_MODEL_OPTIONS: Record<TextProviderId, ModelOption[]> = {
 }
 
 export const IMAGE_MODEL_OPTIONS: Record<ImageProviderId, ModelOption[]> = {
-  gemini: [
-    { value: 'gemini-3.1-flash-image-preview', label: 'gemini-3.1-flash-image-preview' },
-    { value: 'gemini-2.0-flash-preview-image-generation', label: 'gemini-2.0-flash-preview-image-generation' }
+  gemini: [{ value: 'gemini-3.1-flash-image-preview', label: 'gemini-3.1-flash-image-preview' }],
+  imagen4: [
+    { value: 'imagen-4.0-generate-001', label: 'imagen-4.0-generate-001' },
+    { value: 'imagen-4.0-generate-002', label: 'imagen-4.0-generate-002' }
   ],
   imagen3: [{ value: 'imagen-3.0-generate-002', label: 'imagen-3.0-generate-002' }],
   dalle3: [
@@ -200,7 +244,7 @@ export const VIDEO_MODEL_PLACEHOLDER: Record<VideoProviderId, string> = {
 }
 
 const TEXT_IDS = new Set<string>(['gemini', 'openai', 'anthropic', 'grok', 'mistral'])
-const IMAGE_IDS = new Set<string>(['gemini', 'imagen3', 'dalle3', 'flux', 'stability'])
+const IMAGE_IDS = new Set<string>(['gemini', 'imagen4', 'imagen3', 'dalle3', 'flux', 'stability'])
 const VIDEO_IDS = new Set<string>([
   'veo2',
   'veo3',

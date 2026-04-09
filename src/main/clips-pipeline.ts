@@ -1,15 +1,16 @@
 import { BrowserWindow } from 'electron'
-import { unlink } from 'fs/promises'
+import { access, unlink } from 'fs/promises'
 import { join } from 'path'
 import { buildClipPrompt } from '../lib/prompts/clips'
 import type { CharactersDocument } from '../shared/characters-types'
-import type { FragmentsDocument } from '../shared/fragments-types'
+import type { FragmentFrame, FragmentsDocument } from '../shared/fragments-types'
 import {
   ensureFramesDir,
   frameMp4Relative,
   mergeProjectJson,
   readCharactersFile,
   readFragmentsFile,
+  sessionDir,
   writeFragmentsFile
 } from './characters-files'
 import { VIDEO_PROVIDER_LABEL, normalizeVideoProvider } from '../shared/app-settings'
@@ -34,6 +35,18 @@ function broadcast(channel: string, payload: unknown): void {
     if (!win.isDestroyed()) {
       win.webContents.send(channel, payload)
     }
+  }
+}
+
+async function resolveSeedAbsPath(sessionId: string, frame: FragmentFrame): Promise<string | null> {
+  const rel = frame.seed_image_path
+  if (!rel || typeof rel !== 'string') return null
+  const abs = join(sessionDir(sessionId), ...rel.replace(/^[/\\]+/, '').split('/'))
+  try {
+    await access(abs)
+    return abs
+  } catch {
+    return null
   }
 }
 
@@ -116,6 +129,7 @@ async function processFrame(
   const capName = `frame_${String(frame.frame_id).padStart(3, '0')}_cap`
 
   const prompt = buildClipPrompt(frame, chars.characters, chars.meta, doc.meta)
+  const seedAbs = await resolveSeedAbsPath(sessionId, frame)
 
   nextFrames[frameIndex] = {
     ...frame,
@@ -139,7 +153,8 @@ async function processFrame(
     prompt,
     durationSeconds: frame.duration_seconds,
     downloadPath: absMp4,
-    stabilityExtras
+    stabilityExtras,
+    seedImageAbsPath: seedAbs
   })
 
   if (primary.ok) {
@@ -164,7 +179,8 @@ async function processFrame(
     stillPngPath: absStill,
     outMp4Path: absMp4,
     workDir: framesPath,
-    captionBaseName: capName
+    captionBaseName: capName,
+    seedStillAbsPath: seedAbs
   })
 
   if (fb.ok) {

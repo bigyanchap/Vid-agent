@@ -49,6 +49,8 @@ async function routePortrait(
   switch (provider) {
     case 'gemini':
       return generateCharacterPortrait(apiKey, prompt, model || undefined)
+    case 'imagen4':
+      return imagenPortrait(apiKey, model || 'imagen-4.0-generate-001', prompt)
     case 'imagen3':
       return imagenPortrait(apiKey, model || 'imagen-3.0-generate-002', prompt)
     case 'dalle3':

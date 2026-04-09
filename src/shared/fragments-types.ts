@@ -31,6 +31,8 @@ export type FragmentFrame = {
   who_says_what: FragmentDialogueLine[]
   status: string
   video_path: string | null
+  /** Optional first-frame reference under session (e.g. frames/frame_001_seed.png). */
+  seed_image_path: string | null
   /** Set when clip was produced via Imagen + ffmpeg instead of Veo */
   used_fallback?: boolean
   /** Last error when status is failed */
@@ -112,6 +114,7 @@ function normalizeFrame(raw: unknown, index: number): FragmentFrame {
     who_says_what: who,
     status,
     video_path: o.video_path === null || typeof o.video_path === 'string' ? (o.video_path as string | null) : null,
+    seed_image_path: typeof o.seed_image_path === 'string' ? o.seed_image_path : null,
     ...(used_fallback ? { used_fallback: true } : {}),
     ...(error !== undefined ? { error } : {})
   }

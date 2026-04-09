@@ -54,7 +54,8 @@ function normalizeFragmentFrame(f: FragmentFrame): FragmentFrame {
     ...f,
     camera_hint: pickCamera(f.camera_hint),
     transition: pickTransition(f.transition),
-    duration_seconds: pickDuration(f.duration_seconds)
+    duration_seconds: pickDuration(f.duration_seconds),
+    seed_image_path: f.seed_image_path ?? null
   }
 }
 
@@ -433,13 +434,15 @@ export function ScriptBreakdownView({
               </span>{' '}
               Script breakdown approved
             </p>
-            <p className="characters-panel__locked-question">Clips and the next pipeline steps are unlocked.</p>
+            <p className="characters-panel__locked-question">
+              Seed images, clips, and the next pipeline steps are unlocked.
+            </p>
             <button
               type="button"
               className="btn-generate btn-generate--block script-breakdown__proceed-clips"
               onClick={() => onProceedToClipGeneration?.()}
             >
-              Proceed to Clip Generation →
+              Proceed to Seed Images →
             </button>
           </div>
         </div>

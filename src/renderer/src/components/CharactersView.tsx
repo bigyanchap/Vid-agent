@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   createEmptyCharacterEntry,
   createEmptyCharactersDocument,
@@ -53,6 +53,14 @@ function remapDirtyAfterRemove(dirty: Set<number>, removedIndex: number): Set<nu
   return next
 }
 
+function isValidCharactersDocShape(v: unknown): v is CharactersDocument {
+  if (!v || typeof v !== 'object') return false
+  const o = v as Record<string, unknown>
+  if (!o.meta || typeof o.meta !== 'object') return false
+  if (!Array.isArray(o.characters)) return false
+  return true
+}
+
 export function CharactersView({
   sessionId,
   document,
@@ -69,6 +77,30 @@ export function CharactersView({
   const [approving, setApproving] = useState(false)
   const [unlockDialogOpen, setUnlockDialogOpen] = useState(false)
   const [removeConfirmIndex, setRemoveConfirmIndex] = useState<number | null>(null)
+  const [jsonEditorOpen, setJsonEditorOpen] = useState(false)
+  const [jsonDraft, setJsonDraft] = useState('')
+  const [jsonError, setJsonError] = useState<string | null>(null)
+  const [jsonEditorBusy, setJsonEditorBusy] = useState(false)
+  const [jsonCopiedFlash, setJsonCopiedFlash] = useState(false)
+  const jsonTextareaRef = useRef<HTMLTextAreaElement>(null)
+  const jsonGutterRef = useRef<HTMLDivElement>(null)
+  const jsonCopyFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const jsonLineIndices = useMemo(() => {
+    const n = jsonDraft.split('\n').length
+    return Array.from({ length: Math.max(1, n) }, (_, i) => i)
+  }, [jsonDraft])
+
+  const jsonGutterMinCh = useMemo(
+    () => Math.max(2, String(jsonLineIndices.length).length + 1),
+    [jsonLineIndices.length]
+  )
+
+  const syncGutterScroll = useCallback(() => {
+    const ta = jsonTextareaRef.current
+    const g = jsonGutterRef.current
+    if (ta && g) g.scrollTop = ta.scrollTop
+  }, [])
 
   useEffect(() => {
     setDirtyIndices(new Set())
@@ -131,6 +163,80 @@ export function CharactersView({
     setSaveError(null)
     onUnlock()
   }, [onUnlock])
+
+  const closeJsonEditor = useCallback(() => {
+    setJsonEditorOpen(false)
+    setJsonError(null)
+    setJsonEditorBusy(false)
+    setJsonCopiedFlash(false)
+    if (jsonCopyFlashTimerRef.current) {
+      clearTimeout(jsonCopyFlashTimerRef.current)
+      jsonCopyFlashTimerRef.current = null
+    }
+  }, [])
+
+  const copyJsonDraft = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(jsonDraft)
+      setJsonCopiedFlash(true)
+      if (jsonCopyFlashTimerRef.current) clearTimeout(jsonCopyFlashTimerRef.current)
+      jsonCopyFlashTimerRef.current = setTimeout(() => {
+        setJsonCopiedFlash(false)
+        jsonCopyFlashTimerRef.current = null
+      }, 2000)
+    } catch {
+      onAppendAgentLine?.('error', 'Could not copy to clipboard.')
+    }
+  }, [jsonDraft, onAppendAgentLine])
+
+  useEffect(() => {
+    if (!jsonEditorOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeJsonEditor()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [jsonEditorOpen, closeJsonEditor])
+
+  useEffect(() => {
+    return () => {
+      if (jsonCopyFlashTimerRef.current) {
+        clearTimeout(jsonCopyFlashTimerRef.current)
+      }
+    }
+  }, [])
+
+  const openJsonEditor = useCallback(() => {
+    if (!document) return
+    setJsonDraft(JSON.stringify(document, null, 2))
+    setJsonError(null)
+    setJsonEditorOpen(true)
+  }, [document])
+
+  const applyJsonEditor = useCallback(async () => {
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(jsonDraft)
+    } catch (e) {
+      setJsonError(e instanceof Error ? e.message : 'Invalid JSON.')
+      return
+    }
+    if (!isValidCharactersDocShape(parsed)) {
+      setJsonError('Invalid document: root must have object "meta" and array "characters".')
+      return
+    }
+    setJsonEditorBusy(true)
+    setJsonError(null)
+    const res = await window.api.charactersSave(sessionId, parsed)
+    setJsonEditorBusy(false)
+    if (!res.ok) {
+      setJsonError(res.error)
+      return
+    }
+    onDocumentChange(parsed)
+    setDirtyIndices(new Set())
+    closeJsonEditor()
+  }, [jsonDraft, sessionId, onDocumentChange, closeJsonEditor])
 
   if (isGenerating && !document) {
     return (
@@ -330,16 +436,121 @@ export function CharactersView({
             </p>
           </div>
         ) : (
-          <button
-            type="button"
-            className="btn-generate btn-generate--block"
-            disabled={!canApprove || approving}
-            onClick={() => void handleApprove()}
-          >
-            {approving ? 'Working…' : 'Approve and continue'}
-          </button>
+          <div className="characters-panel__approve-row">
+            <button
+              type="button"
+              className="btn-generate characters-panel__approve-primary"
+              disabled={!canApprove || approving}
+              onClick={() => void handleApprove()}
+            >
+              {approving ? 'Working…' : 'Approve and continue'}
+            </button>
+            <button
+              type="button"
+              className="characters-panel__advanced-edit-btn"
+              disabled={approving || jsonEditorBusy}
+              onClick={openJsonEditor}
+            >
+              Edit the JSON
+            </button>
+          </div>
         )}
       </div>
+
+      {jsonEditorOpen && (
+        <div className="confirm-dialog-backdrop" role="presentation" onClick={closeJsonEditor}>
+          <div
+            className="characters-json-editor-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="characters-json-editor-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="characters-json-editor-dialog__header">
+              <h2 id="characters-json-editor-title" className="characters-json-editor-dialog__title">
+                Advanced Edit
+              </h2>
+              <div className="characters-json-editor-dialog__header-actions">
+                <button
+                  type="button"
+                  className="characters-json-editor-dialog__copy-btn"
+                  onClick={() => void copyJsonDraft()}
+                >
+                  {jsonCopiedFlash ? 'Copied' : 'Copy'}
+                </button>
+                <button
+                  type="button"
+                  className="characters-json-editor-dialog__close"
+                  aria-label="Close"
+                  disabled={jsonEditorBusy}
+                  onClick={closeJsonEditor}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            <p className="characters-json-editor-dialog__hint">
+              Edit the full characters document as JSON. Apply validates structure, saves to disk, and refreshes the
+              form. Invalid JSON will not be saved.
+            </p>
+            {jsonError && (
+              <div className="characters-json-editor-dialog__error" role="alert">
+                {jsonError}
+              </div>
+            )}
+            <div className="characters-json-editor-dialog__editor-outer">
+              <div className="characters-json-editor-dialog__editor-inner">
+                <div
+                  ref={jsonGutterRef}
+                  className="characters-json-editor-dialog__gutter"
+                  style={{ width: `${jsonGutterMinCh}ch`, minWidth: `${jsonGutterMinCh}ch` }}
+                  aria-hidden="true"
+                >
+                  {jsonLineIndices.map((i) => (
+                    <div key={i} className="characters-json-editor-dialog__gutter-line">
+                      {i + 1}
+                    </div>
+                  ))}
+                </div>
+                <div className="characters-json-editor-dialog__textarea-holder">
+                  <textarea
+                    ref={jsonTextareaRef}
+                    className="characters-json-editor-dialog__textarea"
+                    value={jsonDraft}
+                    onChange={(e) => {
+                      setJsonDraft(e.target.value)
+                      setJsonError(null)
+                    }}
+                    onScroll={syncGutterScroll}
+                    spellCheck={false}
+                    autoCapitalize="off"
+                    autoComplete="off"
+                    disabled={jsonEditorBusy}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="characters-json-editor-dialog__footer">
+              <button
+                type="button"
+                className="modal-btn modal-btn--secondary"
+                disabled={jsonEditorBusy}
+                onClick={closeJsonEditor}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="modal-btn modal-btn--primary"
+                disabled={jsonEditorBusy}
+                onClick={() => void applyJsonEditor()}
+              >
+                {jsonEditorBusy ? 'Saving…' : 'Apply'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         open={unlockDialogOpen}

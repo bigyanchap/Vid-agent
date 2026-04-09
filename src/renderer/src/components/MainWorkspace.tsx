@@ -9,6 +9,7 @@ import { workspaceLabel, type EditorViewId, type WorkspaceViewId } from '../work
 import { StoryView } from './StoryView'
 import { CharactersView } from './CharactersView'
 import { ClipsView } from './ClipsView'
+import { SeedImagesView } from './SeedImagesView'
 import { ScriptBreakdownView } from './ScriptBreakdownView'
 import { SettingsView } from './SettingsView'
 
@@ -42,6 +43,7 @@ type Props = {
   onAppendAgentLine: (kind: 'user' | 'model' | 'error', text: string) => void
   onScriptBreakdownApproved?: () => void
   onProceedToClipGeneration?: () => void
+  onProceedToClipsFromSeeds?: () => void
   fragmentsDocument: FragmentsDocument | null
   projectStatus: string | undefined
   clipPipeline: { running: boolean; paused: boolean }
@@ -82,6 +84,7 @@ export function MainWorkspace({
   onAppendAgentLine,
   onScriptBreakdownApproved,
   onProceedToClipGeneration,
+  onProceedToClipsFromSeeds,
   fragmentsDocument,
   projectStatus,
   clipPipeline,
@@ -152,6 +155,14 @@ export function MainWorkspace({
             onScriptBreakdownApproved={onScriptBreakdownApproved}
             onProceedToClipGeneration={onProceedToClipGeneration}
             beforeGenerateFragments={beforeGenerateFragments}
+          />
+        )}
+        {active === 'seedImages' && (
+          <SeedImagesView
+            sessionId={sessionId}
+            fragmentsDocument={fragmentsDocument}
+            onProceedToClips={() => onProceedToClipsFromSeeds?.()}
+            onAppendAgentLine={onAppendAgentLine}
           />
         )}
         {active === 'clips' && (

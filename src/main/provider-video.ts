@@ -1,6 +1,6 @@
 import { fal } from '@fal-ai/client'
 import RunwayML from '@runwayml/sdk'
-import { writeFile } from 'fs/promises'
+import { copyFile, writeFile } from 'fs/promises'
 import {
   normalizeVideoProvider,
   type VideoProviderId
@@ -26,6 +26,8 @@ export async function routeClipTextToVideo(opts: {
   durationSeconds: 4 | 6 | 8
   downloadPath: string
   stabilityExtras?: StabilityClipExtras
+  /** When set, Veo uses image-to-video; Stability path uses this still; other providers ignore (text-only). */
+  seedImageAbsPath?: string | null
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const s = loadAppSettings()
   const keys = resolveApiKeys(s)
@@ -50,7 +52,8 @@ export async function routeClipTextToVideo(opts: {
     opts.prompt,
     opts.durationSeconds,
     opts.downloadPath,
-    opts.stabilityExtras
+    opts.stabilityExtras,
+    opts.seedImageAbsPath ?? undefined
   )
 }
 
@@ -70,7 +73,8 @@ async function routeVideo(
   prompt: string,
   durationSeconds: 4 | 6 | 8,
   downloadPath: string,
-  stabilityExtras?: StabilityClipExtras
+  stabilityExtras?: StabilityClipExtras,
+  seedImageAbsPath?: string
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const promptText = prompt.slice(0, 4000)
 
@@ -82,7 +86,8 @@ async function routeVideo(
         model: model || undefined,
         prompt: promptText,
         durationSeconds,
-        downloadPath
+        downloadPath,
+        seedImagePath: seedImageAbsPath
       })
     case 'runwaygen2':
     case 'runwaygen3':
@@ -111,11 +116,19 @@ async function routeVideo(
             'Stability video clip path requires internal layout data. Use another video provider or retry from the clip pipeline.'
         }
       }
-      const img = await generateStillToPath({
-        prompt: promptText,
-        pngPath: stabilityExtras.stillPngPath
-      })
-      if (!img.ok) return img
+      if (seedImageAbsPath) {
+        try {
+          await copyFile(seedImageAbsPath, stabilityExtras.stillPngPath)
+        } catch (e) {
+          return { ok: false, error: e instanceof Error ? e.message : String(e) }
+        }
+      } else {
+        const img = await generateStillToPath({
+          prompt: promptText,
+          pngPath: stabilityExtras.stillPngPath
+        })
+        if (!img.ok) return img
+      }
       try {
         await stillPngToMp4WithCaption({
           stillPngPath: stabilityExtras.stillPngPath,

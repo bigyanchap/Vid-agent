@@ -8,36 +8,31 @@ import type {
 import {
   DEFAULT_APP_SETTINGS,
   IMAGE_MODEL_OPTIONS,
+  IMAGE_PROVIDERS_ORDER,
+  IMAGE_PROVIDER_LABEL,
   TEXT_MODEL_OPTIONS,
-  VIDEO_MODEL_OPTIONS
+  TEXT_PROVIDERS_ORDER,
+  TEXT_PROVIDER_LABEL,
+  VIDEO_MODEL_OPTIONS,
+  VIDEO_PROVIDERS_ORDER,
+  VIDEO_PROVIDER_LABEL,
+  VIDEO_PROVIDER_PRICE_HINT
 } from '@shared/app-settings'
 
-const TEXT_OPTIONS: { value: TextProviderId; label: string }[] = [
-  { value: 'gemini', label: 'Gemini' },
-  { value: 'openai', label: 'OpenAI' },
-  { value: 'anthropic', label: 'Anthropic' },
-  { value: 'grok', label: 'Grok' },
-  { value: 'mistral', label: 'Mistral' }
-]
+const TEXT_OPTIONS = TEXT_PROVIDERS_ORDER.map((value) => ({
+  value,
+  label: TEXT_PROVIDER_LABEL[value]
+}))
 
-const IMAGE_OPTIONS: { value: ImageProviderId; label: string }[] = [
-  { value: 'gemini', label: 'Gemini' },
-  { value: 'imagen3', label: 'Imagen 3' },
-  { value: 'dalle3', label: 'DALL-E 3' },
-  { value: 'flux', label: 'Flux' },
-  { value: 'stability', label: 'Stability AI' }
-]
+const IMAGE_OPTIONS = IMAGE_PROVIDERS_ORDER.map((value) => ({
+  value,
+  label: IMAGE_PROVIDER_LABEL[value]
+}))
 
-const VIDEO_OPTIONS: { value: VideoProviderId; label: string }[] = [
-  { value: 'veo2', label: 'Veo 2 (~$21/min)' },
-  { value: 'veo3', label: 'Veo 3 (~$30/min)' },
-  { value: 'seedance', label: 'Seedance 2.0 (~$1.20/min)' },
-  { value: 'runwaygen2', label: 'Runway Gen 2 (~$3/min)' },
-  { value: 'runwaygen3', label: 'Runway Gen 3 (~$4.80/min)' },
-  { value: 'pika', label: 'Pika (~$4.80/min)' },
-  { value: 'kling', label: 'Kling (~$2.40/min)' },
-  { value: 'stability', label: 'Stability AI (~$1.80/min)' }
-]
+const VIDEO_OPTIONS = VIDEO_PROVIDERS_ORDER.map((value) => ({
+  value,
+  label: `${VIDEO_PROVIDER_LABEL[value]} (${VIDEO_PROVIDER_PRICE_HINT[value]})`
+}))
 
 type Props = {
   onSaved?: () => void

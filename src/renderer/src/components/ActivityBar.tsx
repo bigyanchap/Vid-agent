@@ -1,4 +1,6 @@
-import { FileText, Film, Scissors, Settings, Users, Video } from 'lucide-react'
+import { Coffee, FileText, Film, ImagePlus, Mail, Scissors, Settings, Users, Video } from 'lucide-react'
+
+const COFFEE_URL = 'https://coff.ee/bigyanchap'
 import type { WorkspaceViewId } from '../workspace-views'
 
 const ICON_SIZE = 18
@@ -13,6 +15,7 @@ const ITEMS: Item[] = [
   { id: 'story', label: 'Story', Icon: FileText },
   { id: 'characters', label: 'Characters', Icon: Users },
   { id: 'fragmentedScript', label: 'Script Breakdown', Icon: Film },
+  { id: 'seedImages', label: 'Seed Images', Icon: ImagePlus },
   { id: 'clips', label: 'Clips', Icon: Scissors },
   { id: 'video', label: 'Video', Icon: Video }
 ]
@@ -44,9 +47,9 @@ export function ActivityBar({
       <div className="activity-bar__icons">
         {ITEMS.map(({ id, label, Icon }) => {
           const lockedCharacters = id === 'characters' && onlyStoryUnlocked
-          const lockedClips = id === 'clips' && !clipsUnlocked
+          const lockedSeedOrClips = (id === 'seedImages' || id === 'clips') && !clipsUnlocked
           const lockedVideo = id === 'video' && !videoUnlocked
-          const lockedClipsVideo = lockedClips || lockedVideo
+          const lockedClipsVideo = lockedSeedOrClips || lockedVideo
           const locked = lockedCharacters || lockedClipsVideo
           const isActive = activeWorkspace !== null && activeWorkspace === id
           return (
@@ -65,21 +68,35 @@ export function ActivityBar({
           )
         })}
       </div>
-      <button
-        type="button"
-        className={`activity-icon-btn activity-icon-btn--settings${settingsGearActive ? ' activity-icon-btn--active' : ''}`}
-        aria-label="Settings"
-        aria-current={settingsGearActive ? 'page' : undefined}
-        onClick={onOpenSettings}
-      >
-        <span className="activity-icon-btn__settings-wrap">
-          <Settings size={ICON_SIZE} strokeWidth={1.75} aria-hidden />
-          {settingsGearBadge && (
-            <span className="activity-icon-btn__badge" aria-hidden title="Add missing API keys in Settings" />
-          )}
-        </span>
-        <span className="activity-icon-btn__tooltip">Settings</span>
-      </button>
+      <div className="activity-bar__footer">
+        <button
+          type="button"
+          className={`activity-icon-btn activity-icon-btn--settings${settingsGearActive ? ' activity-icon-btn--active' : ''}`}
+          aria-label="Settings"
+          aria-current={settingsGearActive ? 'page' : undefined}
+          onClick={onOpenSettings}
+        >
+          <span className="activity-icon-btn__settings-wrap">
+            <Settings size={ICON_SIZE} strokeWidth={1.75} aria-hidden />
+            {settingsGearBadge && (
+              <span className="activity-icon-btn__badge" aria-hidden title="Add missing API keys in Settings" />
+            )}
+          </span>
+          <span className="activity-icon-btn__tooltip">Settings</span>
+        </button>
+        <a
+          className="activity-bar__bmc"
+          href={COFFEE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={`Buy me a coffee — ${COFFEE_URL}`}
+        >
+          <Coffee size={16} strokeWidth={1.75} aria-hidden className="activity-bar__bmc-icon" />
+          <span className="activity-bar__bmc-text">
+            Donate
+          </span>
+        </a>
+      </div>
     </aside>
   )
 }

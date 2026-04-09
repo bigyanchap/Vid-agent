@@ -219,7 +219,7 @@ export const AgentChat = forwardRef<AgentChatHandle, AgentChatProps>(function Ag
                   className="agent-chat__clip-action"
                   onClick={() => onProceedToClipGeneration?.()}
                 >
-                  Proceed to Clip Generation →
+                  Proceed to Seed Images →
                 </button>
               </div>
             )}

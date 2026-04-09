@@ -27,6 +27,7 @@ import {
   regenerateClipFrame,
   runClipPipeline
 } from './clips-pipeline'
+import { seedImageClear, seedImageGenerate, seedImageUpload } from './seed-images'
 import { approveFragments, generateAndSaveFragments } from './fragments-generate'
 import type { CharactersDocument } from '../shared/characters-types'
 import type { FragmentsDocument } from '../shared/fragments-types'
@@ -249,4 +250,28 @@ export function registerIpc(): void {
       return clipMediaUrlFromPath(abs)
     }
   )
+
+  ipcMain.handle(
+    'seedImage:upload',
+    async (_evt, payload: { sessionId: string; frameId: number; dataBase64: string }) => {
+      if (!payload?.sessionId || typeof payload.frameId !== 'number' || typeof payload.dataBase64 !== 'string') {
+        return { ok: false as const, error: 'Invalid payload' }
+      }
+      return seedImageUpload(payload.sessionId, payload.frameId, payload.dataBase64)
+    }
+  )
+
+  ipcMain.handle('seedImage:generate', (_evt, payload: { sessionId: string; frameId: number }) => {
+    if (!payload?.sessionId || typeof payload.frameId !== 'number') {
+      return Promise.resolve({ ok: false as const, error: 'Invalid payload' })
+    }
+    return seedImageGenerate(payload.sessionId, payload.frameId)
+  })
+
+  ipcMain.handle('seedImage:clear', (_evt, payload: { sessionId: string; frameId: number }) => {
+    if (!payload?.sessionId || typeof payload.frameId !== 'number') {
+      return Promise.resolve({ ok: false as const, error: 'Invalid payload' })
+    }
+    return seedImageClear(payload.sessionId, payload.frameId)
+  })
 }

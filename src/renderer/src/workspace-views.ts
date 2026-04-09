@@ -2,6 +2,7 @@ export type WorkspaceViewId =
   | 'story'
   | 'characters'
   | 'fragmentedScript'
+  | 'seedImages'
   | 'clips'
   | 'video'
 
@@ -12,6 +13,7 @@ export const WORKSPACE_VIEWS: { id: WorkspaceViewId; label: string }[] = [
   { id: 'story', label: 'Story' },
   { id: 'characters', label: 'Characters' },
   { id: 'fragmentedScript', label: 'Script Breakdown' },
+  { id: 'seedImages', label: 'Seed Images' },
   { id: 'clips', label: 'Clips' },
   { id: 'video', label: 'Video' }
 ]

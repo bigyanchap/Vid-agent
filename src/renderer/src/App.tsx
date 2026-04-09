@@ -173,23 +173,13 @@ export default function App() {
     }
   }, [sessionId, charactersSheetLocked])
 
-  const beginClipGeneration = useCallback(async () => {
-    const v = await window.api.settingsValidateGeneration('clips')
-    if (!v.ok) {
-      agentChatRef.current?.appendLine('error', v.message)
-      return
-    }
-    setActiveView('clips')
-    const start = await window.api.clipsStart(sessionId)
-    if (!start.ok) {
-      agentChatRef.current?.appendLine('error', start.error)
-    }
-    refreshProjectStatus()
-  }, [sessionId, refreshProjectStatus])
+  const goToSeedImages = useCallback(() => {
+    setActiveView('seedImages')
+  }, [])
 
   const onScriptBreakdownApproved = useCallback(() => {
     agentChatRef.current?.appendModelWithClipAction(
-      'Your script breakdown is approved. Clips are ready to generate — open the Clips tab or use the button below.',
+      'Your script breakdown is approved. Optionally add a seed image per clip on the Seed Images tab (or skip and generate from text only). When you are ready, open Clips to generate.',
       'proceed-clips'
     )
   }, [])
@@ -399,7 +389,8 @@ export default function App() {
           onPersistedFragmentsChange={onPersistedFragmentsChange}
           onAppendAgentLine={appendAgentLine}
           onScriptBreakdownApproved={onScriptBreakdownApproved}
-          onProceedToClipGeneration={() => void beginClipGeneration()}
+          onProceedToClipGeneration={goToSeedImages}
+          onProceedToClipsFromSeeds={() => setActiveView('clips')}
           fragmentsDocument={persistedFragments}
           projectStatus={projectStatus}
           clipPipeline={clipPipeline}
@@ -425,7 +416,7 @@ export default function App() {
           gentlePulseGenerateCharacters={nudgeGenerateCharactersNext}
           onApproveCharactersFromChat={() => void runApproveFromChat()}
           clipsGenerating={clipPipeline.running}
-          onProceedToClipGeneration={() => void beginClipGeneration()}
+          onProceedToClipGeneration={goToSeedImages}
           onProceedToFinalVideo={proceedFinalVideo}
         />
       </div>

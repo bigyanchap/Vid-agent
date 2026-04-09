@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai'
-import { writeFile } from 'fs/promises'
+import { copyFile, readFile, writeFile } from 'fs/promises'
 import { buildClipPrompt } from '../lib/prompts/clips'
 import type { CharacterEntry } from '../shared/characters-types'
 import type { CharacterMeta } from '../shared/characters-types'
@@ -19,6 +19,14 @@ function client(apiKey: string): GoogleGenAI {
   return new GoogleGenAI({ apiKey })
 }
 
+function mimeForSeedPath(p: string): string {
+  const lower = p.toLowerCase()
+  if (lower.endsWith('.png')) return 'image/png'
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg'
+  if (lower.endsWith('.webp')) return 'image/webp'
+  return 'image/png'
+}
+
 export async function generateVideoWithVeo(opts: {
   apiKey: string
   /** Gemini Veo model id from Settings (e.g. veo-2.0-flash-exp, veo-3.0-generate). */
@@ -26,17 +34,41 @@ export async function generateVideoWithVeo(opts: {
   prompt: string
   durationSeconds: 4 | 6 | 8
   downloadPath: string
+  /** Optional first-frame image (PNG/JPEG/WebP) for image-to-video. */
+  seedImagePath?: string
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const { apiKey, prompt, durationSeconds, downloadPath } = opts
   const modelId = (opts.model?.trim() || VEO_MODEL) as string
   const ai = client(apiKey)
   const resolution = durationSeconds === 8 ? '1080p' : '720p'
 
+  let seedImage:
+    | {
+        imageBytes: string
+        mimeType: string
+      }
+    | undefined
+  if (opts.seedImagePath) {
+    try {
+      const buf = await readFile(opts.seedImagePath)
+      seedImage = {
+        imageBytes: buf.toString('base64'),
+        mimeType: mimeForSeedPath(opts.seedImagePath)
+      }
+    } catch (e) {
+      return {
+        ok: false,
+        error: `Could not read seed image: ${e instanceof Error ? e.message : String(e)}`
+      }
+    }
+  }
+
   let operation
   try {
     operation = await ai.models.generateVideos({
       model: modelId,
       prompt,
+      ...(seedImage ? { image: seedImage } : {}),
       config: {
         aspectRatio: '16:9',
         durationSeconds,
@@ -122,6 +154,8 @@ export async function runFallbackStillToVideo(opts: {
   outMp4Path: string
   workDir: string
   captionBaseName: string
+  /** When set, use this file as the still instead of generating a new image. */
+  seedStillAbsPath?: string | null
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const prompt = buildClipPrompt(
     opts.frame,
@@ -129,8 +163,16 @@ export async function runFallbackStillToVideo(opts: {
     opts.charactersMeta,
     opts.fragmentsMeta
   )
-  const img = await generateStillToPath({ prompt, pngPath: opts.stillPngPath })
-  if (!img.ok) return img
+  if (opts.seedStillAbsPath) {
+    try {
+      await copyFile(opts.seedStillAbsPath, opts.stillPngPath)
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) }
+    }
+  } else {
+    const img = await generateStillToPath({ prompt, pngPath: opts.stillPngPath })
+    if (!img.ok) return img
+  }
 
   try {
     await stillPngToMp4WithCaption({

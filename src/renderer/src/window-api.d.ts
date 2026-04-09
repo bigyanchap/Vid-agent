@@ -78,6 +78,19 @@ declare global {
       ) => Promise<{ ok: true } | { ok: false; error: string }>
       clipsBusy: () => Promise<boolean>
       clipsMediaUrl: (sessionId: string, relativePath: string) => Promise<string>
+      seedImageUpload: (
+        sessionId: string,
+        frameId: number,
+        dataBase64: string
+      ) => Promise<{ ok: true } | { ok: false; error: string }>
+      seedImageGenerate: (
+        sessionId: string,
+        frameId: number
+      ) => Promise<{ ok: true } | { ok: false; error: string }>
+      seedImageClear: (
+        sessionId: string,
+        frameId: number
+      ) => Promise<{ ok: true } | { ok: false; error: string }>
       onClipsDocUpdate: (cb: (p: { sessionId: string; document: FragmentsDocument; frameIndex: number }) => void) => () => void
       onClipsLog: (
         cb: (p: {

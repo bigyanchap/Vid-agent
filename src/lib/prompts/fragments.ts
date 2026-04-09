@@ -33,6 +33,7 @@ PER FRAME FIELDS:
   If no dialogue in this frame, return empty array []
 - status: always "pending"
 - video_path: always null
+- seed_image_path: always null (user adds seed images in the app later)
 
 CONSISTENCY RULES:
 - Use world_settings to inform every scene_description
@@ -75,7 +76,8 @@ OUTPUT SCHEMA:
       "transition": "",
       "who_says_what": [],
       "status": "pending",
-      "video_path": null
+      "video_path": null,
+      "seed_image_path": null
     }
   ]
 }
