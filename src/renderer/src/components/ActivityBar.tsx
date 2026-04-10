@@ -3,7 +3,7 @@ import { Coffee, FileText, Film, ImagePlus, Mail, Scissors, Settings, Users, Vid
 const COFFEE_URL = 'https://coff.ee/bigyanchap'
 import type { WorkspaceViewId } from '../workspace-views'
 
-const ICON_SIZE = 18
+const ICON_SIZE = 16
 
 type Item = {
   id: WorkspaceViewId
@@ -91,7 +91,7 @@ export function ActivityBar({
           rel="noopener noreferrer"
           title={`Buy me a coffee — ${COFFEE_URL}`}
         >
-          <Coffee size={16} strokeWidth={1.75} aria-hidden className="activity-bar__bmc-icon" />
+          <Coffee size={14} strokeWidth={1.75} aria-hidden className="activity-bar__bmc-icon" />
           <span className="activity-bar__bmc-text">
             Donate
           </span>
