@@ -1,6 +1,6 @@
-# Vid-Agent
+# StoryFlow-Vid-Agent
 
-**Vid-Agent** is a desktop application for an agentic video-generation workflow. The shell follows a **Cursor / VS Code–style layout** (**Electron + React + Vite**, not Next.js) so it feels natural next to editors like Cursor, while the workspace grows into video preview, timelines, and agent tools.
+**Story Flow Vid-Agent** is a desktop application for an agentic video-generation workflow. The shell follows a **Cursor / VS Code–style layout** (**Electron + React + Vite**, not Next.js) so it feels natural next to editors like Cursor, while the workspace grows into video preview, timelines, and agent tools.
 
 ## Current status
 
